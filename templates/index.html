@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jupyter Notebook Interface</title>
+</head>
+<body>
+    <h1>Run a Function in Jupyter Notebook</h1>
+    <form action="/run_function" method="post">
+        <label for="function_name">Select Function:</label>
+        <select id="function_name" name="function_name">
+            {% for function in functions %}
+                <option value="{{ function }}">{{ function }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Run</button>
+    </form>
+</body>
+</html>

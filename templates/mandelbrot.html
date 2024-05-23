@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Parameters and Formula Example</title>
+<style>
+    /* Existing styles... */
+    body,
+    html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: Arial, sans-serif;
+    }
+
+    #app {
+        text-align: center;
+        width: 100%;
+        /* responsive width */
+        max-width: none;
+        /* no maximum width restriction */
+        white-space: nowrap;
+        /* prevents the text from wrapping */
+        overflow: hidden;
+        /* hides any text that overflows its container */
+        text-overflow: ellipsis;
+        /* shows ellipsis if text overflows */
+    }
+
+    input[type="number"] {
+        width: 100%;
+        /* full width within container */
+        padding: 8px;
+        margin: 10px 0;
+    }
+
+    label {
+        display: block;
+        /* ensures label is above the input field */
+        margin: 10px 0 5px;
+    }
+</style>
+
+    <script src="./vue.esm-browser.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <h1>Mandelbrot Set</h1>
+        <h2>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</h2>
+        <h2>z<sub>n : current value </h2>
+        <h2>z<sub>n+1 : next value</h2>
+        <h2>c : constant complex number</h2>
+
+        <p>c =  {{ params.c_re }}+{{ params.c_im }}i </p>
+        <h3>Maximum Iterations: {{ params.max_iter }}</h3>
+
+        <!-- Real part input -->
+        <label for="real">Real Part:</label>
+        <input type="number" id="real" step="any" v-model.number="params.c_re"> <br>
+
+        <!-- Imaginary part input -->
+        <label for="imaginary">Imaginary Part:</label>
+        <input type="number" id="imaginary" step="any" v-model.number="params.c_im"> <br>
+
+        <!-- Maximum iterations input -->
+        <label for="iterations">Max Iterations:</label>
+        <input type="number" id="iterations" v-model.number="params.max_iter"> <br>
+    </div>
+
+    <script type="module">
+        import { createApp, reactive } from './vue.esm-browser.js' // Ensure this path is correct
+
+        createApp({
+            setup() {
+                const params = reactive({
+                    c_re: 0.0,      // Default real part
+                    c_im: 0.0,      // Default imaginary part
+                    max_iter: 100   // Default max iterations
+                });
+
+                return {
+                    params
+                };
+            }
+        }).mount("#app");
+    </script>
+</body>
+
+</html>

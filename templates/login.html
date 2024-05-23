@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maths Accelerator</title>
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        #app {
+            text-align: center;
+            padding: 20px;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+    <script src="./vue.esm-browser.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <h1>Group ISSAC</h1>
+        <button @click="goToPage('./index.html')">Login</button>
+    </div>
+
+    <!-- Using type="module" for ES modules -->
+    <script type="module">
+        import { createApp } from './vue.esm-browser.js'; // Importing Vue directly from a CDN
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = createApp({
+                methods: {
+                    goToPage(pageUrl) {
+                        window.location.href = pageUrl;
+                    }
+                }
+            }).mount("#app");
+        });
+    </script>
+</body>
+
+</html>

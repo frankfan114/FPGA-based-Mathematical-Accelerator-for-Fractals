@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Parameters and Formula Example</title>
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        #app {
+            text-align: center;
+            padding: 20px;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <h1>Mandelbrot Set</h1>
+        <button @click="fetchMandelbrotResults">Compute Mandelbrot</button>
+        <p>Total Time: {{ results.total_time }} seconds</p>
+        <p>Overall Throughput: {{ results.overall_throughput }} pixels per second</p>
+        <p>Latency: {{ results.latency }} seconds per pixel</p>
+        <img id="mandelbrotImage" src="" alt="Mandelbrot Set Image" style="display: none;">
+    </div>
+
+    <script type="module">
+        import { createApp, reactive } from "./vue.esm-browser.js";
+
+        createApp({
+            setup() {
+                const results = reactive({
+                    total_time: 0,
+                    overall_throughput: 0,
+                    latency: 0
+                });
+
+                function fetchMandelbrotResults() {
+                    fetch('http://146.169.174.141:5001/')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            results.total_time = data.total_time;
+                            results.overall_throughput = data.overall_throughput;
+                            results.latency = data.latency;
+
+                            // Assuming the server endpoint to fetch the image is correctly set
+                            checkAndDisplayImage('http://146.169.174.141:5001/image');
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                        });
+                }
+
+                function checkAndDisplayImage(imageUrl) {
+                    fetch(imageUrl, { method: 'HEAD' })
+                        .then(res => {
+                            if (res.ok) {
+                                const imgElement = document.getElementById('mandelbrotImage');
+                                imgElement.src = imageUrl;
+                                imgElement.style.display = 'block';
+                            } else {
+                                console.error('Image not found on server.');
+                            }
+                        }).catch(err => console.error('Error fetching image:', err));
+                }
+
+                return {
+                    results,
+                    fetchMandelbrotResults
+                };
+            }
+        }).mount("#app");
+    </script>
+</body>
+
+</html>

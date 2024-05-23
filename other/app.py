@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
-from notebook_runner import run_notebook_function, get_notebook_functions
+from other.notebook_runner import run_notebook_function, get_notebook_functions
 
 app = Flask(__name__)
 

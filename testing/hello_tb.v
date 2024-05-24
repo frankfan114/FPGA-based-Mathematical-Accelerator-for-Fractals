@@ -1,4 +1,4 @@
-`timescale 1ns / 1ns
+`timescale 1ms / 1ns
 `include "hello.v"
 
 module hello_tb;

@@ -1,9 +1,9 @@
 from PIL import Image
 from mandelbrot import total_time, overall_throughput, latency
 import io
+import os
 
-
-from flask import Flask 
+from flask import Flask, send_from_directory
 
 app = Flask(__name__)
 
@@ -20,7 +20,10 @@ def hello():
 
 #"Total time: ",total_time, ":.4f seconds""Overall throughput:", overall_throughput," pixels per second""Latency per pixel: ",latency, "seconds"
 
-
+@app.route('/image')
+def serve_image():
+    image_name = 'mandelbrot.png'
+    return send_from_directory(os.path.join(app.root_path), image_name)
 
 
 if __name__ == '__main__':

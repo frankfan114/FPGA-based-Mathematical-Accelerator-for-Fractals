@@ -54,18 +54,15 @@ def extract_pixel_data(vcd_file, max_pixels):
 # Path to the VCD file
 vcd_file = 'test.vcd'
 
-# Number of pixels to extract
-max_pixels = 640 * 480
-
-# Parse VCD file
-pixels = extract_pixel_data(vcd_file, max_pixels)
-
-# Assuming a resolution of 640x480 for the image (for 307,200 pixels)
+# resolution of 640x480 
 width = 640
 height = 480
 
-# Ensure we have the correct number of pixels
 expected_pixels = width * height
+
+# Parse VCD file
+pixels = extract_pixel_data(vcd_file, expected_pixels)
+
 if len(pixels) < expected_pixels:
     raise ValueError(f"Expected {expected_pixels} pixels, but got {len(pixels)}")
 

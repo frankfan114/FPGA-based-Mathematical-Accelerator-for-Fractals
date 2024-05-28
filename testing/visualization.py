@@ -91,4 +91,4 @@ for y in range(height):
         image[y, x] = pixels[y * width + x]
 
 cv2.imwrite('output.png', image)
-print("Image saved as output4.png")
+print("Image saved as output.png")

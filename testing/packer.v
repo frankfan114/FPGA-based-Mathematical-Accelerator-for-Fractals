@@ -76,31 +76,36 @@ always @* begin
             begin 
                 //Output is not complete (valid) in this state, that means we are always ready for the next pixel.
                 tdata = {g, last_r, last_b, last_g}; //tdata is don't care since valid is false - just copy another state 
+                //tdata = 32'h0; //tdata is don't care since valid is false - just copy another state
                 tvalid = 1'b0;
                 ready = 1'b1;
             end
         2'b01 :
             begin 
-                tdata = {g, last_r, last_b, last_g};
+                //tdata = {g, last_r, last_b, last_g};
+                tdata = {b, last_r, last_g, last_b};
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         2'b10 : 
             begin 
-                tdata = {b, g, last_r, last_b};
+                //tdata = {b, g, last_r, last_b};
+                tdata = {g, b, last_r, last_g};
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         2'b11 : 
             begin 
-                tdata = {r, b, g, last_r};
+                //tdata = {r, b, g, last_r};
+                tdata = {r, g, b, last_r};
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         default : 
             begin 
                 //Copy of state 0. Not possible in practice but included for simulation completeness
-                tdata = {g, last_r, last_b, last_g}; 
+                //tdata = {g, last_r, last_b, last_g}; 
+                tdata = {b, last_r, last_g, last_b};
                 tvalid = 1'b0;
                 ready = 1'b1;
             end

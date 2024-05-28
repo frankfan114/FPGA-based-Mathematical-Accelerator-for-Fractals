@@ -5,102 +5,145 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mandelbrot Parameters and Formula Example</title>
-<style>
-    /* Existing styles... */
-    body,
-    html {
-        height: 100%;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: Arial, sans-serif;
-    }
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
 
-    #app {
-        text-align: center;
-        width: 100%;
-        /* responsive width */
-        max-width: none;
-        /* no maximum width restriction */
-        white-space: nowrap;
-        /* prevents the text from wrapping */
-        overflow: hidden;
-        /* hides any text that overflows its container */
-        text-overflow: ellipsis;
-        /* shows ellipsis if text overflows */
-    }
+        #app {
+            text-align: center;
+            width: 100%;
+            max-width: 1200px;
+        }
 
-    input[type="number"] {
-        width: 100%;
-        /* full width within container */
-        padding: 8px;
-        margin: 10px 0;
-    }
+        .input-section,
+        .output-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
 
-    label {
-        display: block;
-        /* ensures label is above the input field */
-        margin: 10px 0 5px;
-    }
-</style>
+        .input-section label,
+        .output-section p {
+            width: 200px;
+            margin: 5px;
+        }
 
-    <script src="./vue.esm-browser.js"></script>
+        input[type="number"] {
+            width: 200px;
+            padding: 8px;
+            margin: 5px;
+        }
+    </style>
+
+    <script src="/static/vue.esm-browser.js"></script>
 </head>
 
 <body>
     <div id="app">
+        <button @click="goToPage('newMandelbrot.html')">new output</button>
+
         <h1>Mandelbrot Set</h1>
         <h2>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</h2>
-        <h2>z<sub>n : current value </h2>
-        <h2>z<sub>n+1 : next value</h2>
-        <h2>c : constant complex number</h2>
 
-        <p>c =  {{ params.c_re }}+{{ params.c_im }}i </p>
-        <h3>Maximum Iterations: {{ params.max_iter }}</h3>
+        <div class="input-section">
+            <!-- Real part input -->
+            <label for="real max">Max Real Part:</label>
+            <input type="number" id="maxreal" step="any" v-model.number="params.c_re">
+            <label for="real min">Min Real Part:</label>
+            <input type="number" id="minreal" step="any" v-model.number="params.c_re">
 
-        <!-- Real part input -->
-        <label for="real">Real Part:</label>
-        <input type="number" id="real" step="any" v-model.number="params.c_re"> <br>
+            <!-- Imaginary part input -->
+            <label for="imaginary max">Max Imaginary Part:</label>
+            <input type="number" id="maximaginary" step="any" v-model.number="params.c_im">
+            <label for="imaginary min">Min Imaginary Part:</label>
+            <input type="number" id="minimaginary" step="any" v-model.number="params.c_im">
 
-        <!-- Imaginary part input -->
-        <label for="imaginary">Imaginary Part:</label>
-        <input type="number" id="imaginary" step="any" v-model.number="params.c_im"> <br>
+            <!-- Maximum iterations input -->
+            <label for="iterations">Max Iterations:</label>
+            <input type="number" id="iterations" v-model.number="params.max_iter">
 
-        <!-- Maximum iterations input -->
-        <label for="iterations">Max Iterations:</label>
-        <input type="number" id="iterations" v-model.number="params.max_iter"> <br>
+            <label for="Time">Total Time:</label>
+            <input type="number" id="Time" v-model.number="params.time">
 
-        <label for="iterations">Total Time:</label>
-        <input type="number" id="iterations" v-model.number="params.max_iter"> <br>
+            <label for="Throughput">Overall Throughput:</label>
+            <input type="number" id="Throughput" v-model.number="params.throughput">
 
-        <label for="iterations">Overall Throughput:</label>
-        <input type="number" id="iterations" v-model.number="params.max_iter"> <br>
+            <label for="Latency">Latency:</label>
+            <input type="number" id="Latency" v-model.number="params.latency">
 
-        <label for="iterations">Latency:</label>
-        <input type="number" id="iterations" v-model.number="params.max_iter"> <br>
+            <label for="Hight">Height:</label>
+            <input type="number" id="Height" v-model.number="params.hi">
 
+            <label for="Width">Width:</label>
+            <input type="number" id="Width" v-model.number="params.wi">
 
+            <button onclick="submitData()">Submit</button>
+        </div>
 
-
+        <div class="output-section">
+            <p>c = {{ params.c_re }} + {{ params.c_im }}i</p>
+            <p>Maximum Iterations: {{ params.max_iter }}</p>
+            <p>Total Time: {{ params.time }}</p>
+            <p>Overall Throughput: {{ params.throughput }}</p>
+            <p>Latency: {{ params.latency }}</p>
+            <p>Height: {{ params.hi }}</p>
+            <p>Width: {{ params.wi }}</p>
+        </div>
     </div>
 
     <script type="module">
-        import { createApp, reactive } from './vue.esm-browser.js' // Ensure this path is correct
+        import { createApp, reactive } from '/static/vue.esm-browser.js'
 
         createApp({
             setup() {
                 const params = reactive({
-                    c_re: 0.0,      // Default real part
-                    c_im: 0.0,      // Default imaginary part
-                    max_iter: 100   // Default max iterations
+                    c_re: 0.0, // Default real part
+                    c_im: 0.0, // Default imaginary part
+                    max_iter: 100, // Default max iterations
+                    time: 0.0,
+                    throughput: 0.0,
+                    latency: 0.0,
+                    hi: 0,
+                    wi: 0
                 });
 
+                function goToPage(pageUrl) {
+                    window.location.href = pageUrl;
+                }
+
                 return {
-                    params
+                    params,
+                    goToPage
                 };
             }
         }).mount("#app");
+
+        function submitData() {
+            const inputData = {
+                max_real: parseFloat(document.getElementById('maxreal').value),
+                min_real: parseFloat(document.getElementById('minreal').value),
+                max_imaginary: parseFloat(document.getElementById('maximaginary').value),
+                min_imaginary: parseFloat(document.getElementById('minimaginary').value),
+                max_iterations: parseInt(document.getElementById('iterations').value),
+                total_time: parseFloat(document.getElementById('Time').value),
+                overall_throughput: parseFloat(document.getElementById('Throughput').value),
+                latency: parseFloat(document.getElementById('Latency').value),
+                height: parseInt(document.getElementById('Height').value),
+                width: parseInt(document.getElementById('Width').value)
+            };
+
+            const jsonData = JSON.stringify(inputData);
+            console.log(jsonData);
+        }
     </script>
 </body>
 

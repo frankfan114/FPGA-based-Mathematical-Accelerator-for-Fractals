@@ -27,19 +27,19 @@
         cursor: pointer;
       }
     </style>
-    <script src="./vue.esm-browser.js"></script>
+    <script src="/static/vue.esm-browser.js"></script>
   </head>
 
   <body>
     <div id="app">
       <h1>Welcome to Maths Accelerator</h1>
-      <button @click="goToPage('./newMandelbrot.html')">Mandelbrot Set</button>
+      <button @click="goToPage('newMandelbrot.html')">Mandelbrot Set</button>
       <button @click="goToPage('other.html')">Other</button>
     </div>
 
     <!-- Using type="module" for ES modules -->
     <script type="module">
-      import { createApp } from "./vue.esm-browser.js"; // Importing Vue directly from a CDN
+      import { createApp } from "/static/vue.esm-browser.js"; // Importing Vue directly from a CDN
 
       document.addEventListener("DOMContentLoaded", () => {
         const app = createApp({

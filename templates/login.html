@@ -28,18 +28,18 @@
             cursor: pointer;
         }
     </style>
-    <script src="./vue.esm-browser.js"></script>
+    <script src="/static/vue.esm-browser.js"></script>
 </head>
 
 <body>
     <div id="app">
         <h1>Group ISSAC</h1>
-        <button @click="goToPage('./index.html')">Login</button>
+        <button @click="goToPage('index.html')">Login</button>
     </div>
 
     <!-- Using type="module" for ES modules -->
     <script type="module">
-        import { createApp } from './vue.esm-browser.js'; // Importing Vue directly from a CDN
+        import { createApp } from '/static/vue.esm-browser.js'; // Importing Vue directly from a CDN
 
         document.addEventListener('DOMContentLoaded', () => {
             const app = createApp({

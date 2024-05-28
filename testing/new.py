@@ -22,15 +22,17 @@ def extract_pixel_data(vcd_file, max_pixels):
 
                 if signals.get('valid') in changes:
                     valid_change = changes[signals['valid']]
-                    valid = valid_change == 1
+                    valid = valid_change == '1'  # Ensure valid is correctly set
 
                 if valid and signals.get('data') in changes:
                     data_change = changes[signals['data']]
                     if data_change is not None:
-                        word_buffer.append(int(data_change))
+                        if isinstance(data_change, str):
+                            word_buffer.append(int(data_change, 2))  # Convert binary string to integer
+                        else:
+                            word_buffer.append(data_change)  # Assume it's already an integer
                         if len(word_buffer) == 3:
-                            # Combine 3 words into a single 96-bit integer
-                            combined_data = (word_buffer[2] << 64) | (word_buffer[1] << 32) | word_buffer[0]
+                            combined_data = (word_buffer[0] << 64) | (word_buffer[1] << 32) | word_buffer[2]
                             for i in range(4):
                                 pixel_value = (combined_data >> (72 - 24 * i)) & 0xFFFFFF
                                 r = (pixel_value >> 16) & 0xFF
@@ -46,7 +48,7 @@ def extract_pixel_data(vcd_file, max_pixels):
                 changes = {token.data.id_code: token.data.value}
                 if signals.get('valid') in changes:
                     valid_change = changes[signals['valid']]
-                    valid = valid_change == '1'
+                    valid = valid_change == '1'  # Ensure valid is correctly set
 
     print(f"Total pixels extracted: {len(pixels)}")
     return pixels
@@ -54,7 +56,7 @@ def extract_pixel_data(vcd_file, max_pixels):
 # Path to the VCD file
 vcd_file = 'test.vcd'
 
-# resolution of 640x480 
+# Resolution of 640x480
 width = 640
 height = 480
 

@@ -44,8 +44,8 @@ end
 
 wire [7:0] r, g, b;
 assign r = x[7:0];
-assign g = y[7:0];
-assign b = x[6:0]+y[6:0];
+assign g = x[6:0]+y[6:0];
+assign b = y[7:0];
 
 packer pixel_packer(    .aclk(aclk),
                         .aresetn(aresetn),

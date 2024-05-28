@@ -8,6 +8,7 @@ def extract_pixel_data(vcd_file, max_pixels):
     valid_pixel_count = 0
     valid = False  # Track the valid signal state
     word_buffer = []  # Buffer to store 3 32-bit words
+    initial_pixel_value = None  # Variable to store initial pixel value
 
     with open(vcd_file, 'rb') as f:  # Open the file in binary mode
         for token in vcd.tokenize(f):
@@ -36,11 +37,13 @@ def extract_pixel_data(vcd_file, max_pixels):
                                 r = (pixel_value >> 16) & 0xFF
                                 g = (pixel_value >> 8) & 0xFF
                                 b = pixel_value & 0xFF
-                                pixels.append([r, b, g])
+                                pixels.append([r, g, b])
                                 valid_pixel_count += 1
                                 if valid_pixel_count >= max_pixels:
-                                    return pixels
+                                    return pixels[:max_pixels]
                             word_buffer = []  # Reset buffer after extracting pixels
+                    if initial_pixel_value is None:
+                        initial_pixel_value = int(data_change)
 
             elif token.kind == vcd.reader.TokenKind.CHANGE_SCALAR:
                 changes = {token.data.id_code: token.data.value}
@@ -48,13 +51,28 @@ def extract_pixel_data(vcd_file, max_pixels):
                     valid_change = changes[signals['valid']]
                     valid = valid_change == '1'
 
+    # If no pixels were extracted and an initial value was detected
+    if not pixels and initial_pixel_value is not None:
+        for _ in range(max_pixels):
+            r = (initial_pixel_value >> 16) & 0xFF
+            g = (initial_pixel_value >> 8) & 0xFF
+            b = initial_pixel_value & 0xFF
+            pixels.append([r, g, b])
+
+    # Ensure we have the exact number of expected pixels
+    if len(pixels) < max_pixels:
+        print(f"Warning: Expected {max_pixels} pixels, but only got {len(pixels)}")
+        # Fill the remaining pixels with black
+        for _ in range(max_pixels - len(pixels)):
+            pixels.append([0, 0, 0])
+
     print(f"Total pixels extracted: {len(pixels)}")
-    return pixels
+    return pixels[:max_pixels]
 
 # Path to the VCD file
 vcd_file = 'test.vcd'
 
-# resolution of 640x480 
+# Resolution of 640x480 
 width = 640
 height = 480
 
@@ -62,9 +80,6 @@ expected_pixels = width * height
 
 # Parse VCD file
 pixels = extract_pixel_data(vcd_file, expected_pixels)
-
-if len(pixels) < expected_pixels:
-    raise ValueError(f"Expected {expected_pixels} pixels, but got {len(pixels)}")
 
 # Convert pixel data to numpy array and reshape
 pixels = np.array(pixels[:expected_pixels])

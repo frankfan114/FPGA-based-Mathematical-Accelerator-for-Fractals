@@ -60,7 +60,7 @@
                 });
 
                 function fetchMandelbrotResults() {
-                    fetch('http://146.169.143.237:5001/')
+                    {# comment #} fetch('http://146.169.143.237:5001/')
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error('Network response was not ok');
@@ -70,10 +70,10 @@
                         .then(data => {
                             results.total_time = data.total_time;
                             results.overall_throughput = data.overall_throughput;
-                            results.latency = data.latency;
+                            results.latency = data.latency; {# endcomment #}
 
                             // Assuming the server endpoint to fetch the image is correctly set
-                            checkAndDisplayImage('http://146.169.143.237:5001/image');
+                            checkAndDisplayImage('http://146.169.139.197:5001/image');
                         })
                         .catch(error => {
                             console.error('Fetch error:', error);

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+</head>
+<body>
+    <h1>Video Player</h1>
+    <div id="video-container">
+        <canvas id="video-canvas"></canvas>
+    </div>
+
+    <script>
+        var canvas = document.getElementById('video-canvas');
+        var context = canvas.getContext('2d');
+
+        function showFrame(frameData) {
+            if (frameData) {
+                var img = new Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0);
+                };
+                img.src = frameData;
+            }
+        }
+
+        function playVideo() {
+            fetchNextFrame();
+        }
+
+        function fetchNextFrame() {
+            fetch('/next_frame')
+                .then(response => response.blob())
+                .then(blob => {
+                    var reader = new FileReader();
+                    reader.onload = function() {
+                        showFrame(reader.result);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+
+            setTimeout(fetchNextFrame, 1000); // 请求下一帧的时间间隔为 1 秒
+        }
+
+        playVideo();
+    </script>
+</body>
+</html>

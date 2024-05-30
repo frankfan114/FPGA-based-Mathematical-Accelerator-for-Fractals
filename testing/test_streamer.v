@@ -1,29 +1,44 @@
 module test_streamer(
-input           aclk,
-input           aresetn,
+    input           aclk,
+    input           aresetn,
 
-output [31:0]   out_stream_tdata,
-output [3:0]    out_stream_tkeep,
-output          out_stream_tlast,
-input           out_stream_tready,
-output          out_stream_tvalid,
-output [0:0]    out_stream_tuser );
+    output reg [31:0]   out_stream_tdata,
+    output reg [3:0]    out_stream_tkeep,
+    output reg          out_stream_tlast,
+    input               out_stream_tready,
+    output reg          out_stream_tvalid,
+    output reg [0:0]    out_stream_tuser
+);
 
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
 
+localparam integer max_iteration = 255;
+localparam real re_max = 1;
+localparam real re_min = -2;
+localparam real im_max = 1.2;
+localparam real im_min = -1.2;
+// Scaling factors for the complex plane
+localparam real SCALE_REAL = (re_max - re_min) / X_SIZE;
+localparam real SCALE_IMAG = (im_max - im_min) / Y_SIZE;
+localparam real OFFSET_REAL = re_min;
+localparam real OFFSET_IMAG = im_min;
+
 reg [9:0] x;
 reg [8:0] y;
 
-wire first = (x == 0) & (y==0);
+wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 
-wire valid_int = 1'b1;
-
-always @(posedge aclk) begin
-    if (aresetn) begin
-        if (ready & valid_int) begin
+always @(posedge aclk or negedge aresetn) begin
+    if (!aresetn) begin
+        x <= 0;
+        y <= 0;
+        out_stream_tvalid <= 1'b0;
+    end
+    else begin
+        if (out_stream_tready & out_stream_tvalid) begin
             if (lastx) begin
                 x <= 9'd0;
                 if (lasty) begin
@@ -33,27 +48,80 @@ always @(posedge aclk) begin
                     y <= y + 9'd1;
                 end
             end
-            else x <= x + 9'd1;
+            else begin
+                x <= x + 9'd1;
+            end
         end
-    end
-    else begin
-        x <= 0;
-        y <= 0;
+        out_stream_tvalid <= 1'b1;
     end
 end
 
-wire [7:0] r, g, b;
-assign r = x[7:0];
-assign g = x[6:0]+y[6:0];
-assign b = y[7:0];
+// Function to compute the Mandelbrot set and return RGB color
+function [23:0] compute_mandelbrot;
+    input [9:0] px;
+    input [8:0] py;
+    real cr, ci, zr, zi, zr2, zi2;
+    integer i;
+    begin
+        cr = OFFSET_REAL + px * SCALE_REAL;
+        ci = OFFSET_IMAG + py * SCALE_IMAG;
+        zr = 0;
+        zi = 0;
+        for (i = 0; i < max_iteration; i = i + 1) begin
+            zr2 = zr * zr;
+            zi2 = zi * zi;
+            if (zr2 + zi2 > 4.0) begin
+                // Map the iteration count to RGB using a color palette
+                compute_mandelbrot = palette(i);
+                i = max_iteration; // Exit the loop early
+            end
+            else begin
+                zi = 2 * zr * zi + ci;
+                zr = zr2 - zi2 + cr;
+            end
+        end
+        // If max_iteration is reached, the point is in the Mandelbrot set (black)
+        if (i == max_iteration) begin
+            compute_mandelbrot = 24'h000000;
+        end
+    end
+endfunction
+
+// Function to generate color based on iteration count
+function [23:0] palette;
+    input [7:0] iter;
+    reg [7:0] r, g, b;
+    begin
+        // Example color palette
+        r = iter; // Red component
+        g = iter * 2; // Green component
+        b = 255 - iter; // Blue component
+        palette = {r, g, b};
+    end
+endfunction
+
+always @(*) begin
+    {out_stream_tdata[31:24], out_stream_tdata[23:16], out_stream_tdata[15:8]} = compute_mandelbrot(x, y);
+    out_stream_tdata[7:0] = 8'd0; // Padding the LSB of data with zero
+    out_stream_tkeep = 4'b1111;   // Assuming all bytes are valid
+    out_stream_tlast = lastx & lasty; // End of frame
+    out_stream_tuser = first;     // Indicate the first pixel
+end
+
+// simulator pixel_simulator(
+//     .aclk(aclk),
+//     .aresetn(aresetn),
+//     .r(out_stream_tdata[31:24]), 
+//     .g(out_stream_tdata[23:16]), 
+//     .b(out_stream_tdata[15:8])
+// );
 
 packer pixel_packer(    .aclk(aclk),
                         .aresetn(aresetn),
-                        .r(r), .g(g), .b(b),
+                        .r(out_stream_tdata[31:24]), .g(out_stream_tdata[23:16]), .b(out_stream_tdata[15:8]),
                         .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
- 
 endmodule

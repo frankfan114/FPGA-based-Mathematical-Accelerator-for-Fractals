@@ -8,9 +8,9 @@ def extract_pixel_data(vcd_file, max_pixels):
     valid_pixel_count = 0
     valid = False  # Track the valid signal state
     word_buffer = []  # Buffer to store 3 32-bit words
-    initial_pixel_value = None  # Variable to store initial pixel value
+    last_valid_pixel_value = None  # Last valid pixel value for continued use
 
-    with open(vcd_file, 'rb') as f:  # Open the file in binary mode
+    with open(vcd_file, 'rb') as f:
         for token in vcd.tokenize(f):
             if token.kind == vcd.reader.TokenKind.VAR:
                 var = token.data
@@ -22,8 +22,7 @@ def extract_pixel_data(vcd_file, max_pixels):
                 changes = {token.data.id_code: token.data.value}
 
                 if signals.get('valid') in changes:
-                    valid_change = changes[signals['valid']]
-                    valid = valid_change == 1
+                    valid = int(changes[signals['valid']]) == 1
 
                 if valid and signals.get('data') in changes:
                     data_change = changes[signals['data']]
@@ -34,6 +33,7 @@ def extract_pixel_data(vcd_file, max_pixels):
                             combined_data = (word_buffer[2] << 64) | (word_buffer[1] << 32) | word_buffer[0]
                             for i in range(4):
                                 pixel_value = (combined_data >> (24 * i)) & 0xFFFFFF
+                                last_valid_pixel_value = pixel_value  # Update the last known valid pixel value
                                 r = (pixel_value >> 16) & 0xFF
                                 g = (pixel_value >> 8) & 0xFF
                                 b = pixel_value & 0xFF
@@ -42,29 +42,17 @@ def extract_pixel_data(vcd_file, max_pixels):
                                 if valid_pixel_count >= max_pixels:
                                     return pixels[:max_pixels]
                             word_buffer = []  # Reset buffer after extracting pixels
-                    if initial_pixel_value is None:
-                        initial_pixel_value = int(data_change)
 
-            elif token.kind == vcd.reader.TokenKind.CHANGE_SCALAR:
-                changes = {token.data.id_code: token.data.value}
-                if signals.get('valid') in changes:
-                    valid_change = changes[signals['valid']]
-                    valid = valid_change == '1'
-
-    # If no pixels were extracted and an initial value was detected
-    if not pixels and initial_pixel_value is not None:
-        for _ in range(max_pixels):
-            r = (initial_pixel_value >> 16) & 0xFF
-            g = (initial_pixel_value >> 8) & 0xFF
-            b = initial_pixel_value & 0xFF
+    # If insufficient pixel data is available, use the last valid pixel value to fill
+    while valid_pixel_count < max_pixels:
+        if last_valid_pixel_value is not None:
+            r = (last_valid_pixel_value >> 16) & 0xFF
+            g = (last_valid_pixel_value >> 8) & 0xFF
+            b = last_valid_pixel_value & 0xFF
             pixels.append([r, g, b])
-
-    # Ensure we have the exact number of expected pixels
-    if len(pixels) < max_pixels:
-        print(f"Warning: Expected {max_pixels} pixels, but only got {len(pixels)}")
-        # Fill the remaining pixels with black
-        for _ in range(max_pixels - len(pixels)):
-            pixels.append([0, 0, 0])
+        else:
+            pixels.append([0, 0, 0])  # Default to black if no valid data was ever received
+        valid_pixel_count += 1
 
     print(f"Total pixels extracted: {len(pixels)}")
     return pixels[:max_pixels]
@@ -72,7 +60,7 @@ def extract_pixel_data(vcd_file, max_pixels):
 # Path to the VCD file
 vcd_file = 'test.vcd'
 
-# Resolution of 640x480 
+# Resolution of 640x480
 width = 640
 height = 480
 
@@ -82,13 +70,9 @@ expected_pixels = width * height
 pixels = extract_pixel_data(vcd_file, expected_pixels)
 
 # Convert pixel data to numpy array and reshape
-pixels = np.array(pixels[:expected_pixels])
+pixels_array = np.array(pixels).reshape((height, width, 3))
 
 # Create and save the image
-image = np.zeros((height, width, 3), dtype=np.uint8)
-for y in range(height):
-    for x in range(width):
-        image[y, x] = pixels[y * width + x]
-
+image = pixels_array.astype(np.uint8)
 cv2.imwrite('output.png', image)
 print("Image saved as output.png")

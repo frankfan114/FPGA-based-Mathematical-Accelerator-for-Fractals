@@ -7,8 +7,8 @@ import io
 WIDTH, HEIGHT = 800, 800
 
 # 曼德布罗集合的范围
-REAL_MIN, REAL_MAX = -2.0, 1.0
-IMAG_MIN, IMAG_MAX = -1.5, 1.5
+REAL_MIN, REAL_MAX = -5.0, 2.0
+IMAG_MIN, IMAG_MAX = -3.5, 3.5
 
 # 最大迭代次数
 MAX_ITER = 100
@@ -58,9 +58,9 @@ def generate_mandelbrot_image(filename):
     pixels = image.load()
     frames = []
     start_time = time.time()
-    for iteration in range(1, MAX_ITER + 1):
-          frame = generate_mandelbrot_frame(iteration, MAX_ITER)
-          frames.append(frame)
+    # for iteration in range(1, MAX_ITER + 1):
+    #       frame = generate_mandelbrot_frame(iteration, MAX_ITER)
+    #       frames.append(frame)
     for x in range(WIDTH):
         for y in range(HEIGHT):
             real = REAL_MIN + (REAL_MAX - REAL_MIN) * x / (WIDTH - 1)

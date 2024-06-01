@@ -15,6 +15,12 @@
             align-items: center;
             font-family: Arial, sans-serif;
         }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
 
         #app {
             text-align: center;
@@ -46,7 +52,7 @@
 
 <body>
     <div id="app">
-        <button @click="goToPage('newMandelbrot.html')">New Output</button>
+        <button @click="goToPage('newMandelbrot.html')">Return</button>
         
         <h1>Mandelbrot Set</h1>
         <h2>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</h2>
@@ -79,17 +85,9 @@
             </form>
         </div>
 
+        
         <div class="output-section">
-            <p>max_real: {{ c_maxre }}</p>
-            <p>min_real: {{ c_minre }}</p>
-            <p>max_imaginary: {{ c_maxim }}</p>
-            <p>min_imaginary: {{ c_minim }}</p>
-            <p>max_iterations: {{ max_iter }}</p>
-            <p>height: {{ hi }}</p>
-            <p>width: {{ wi }}</p>
-        </div>
-        <div class="output-section">
-            <img id="mandelbrotImage" :src="mandelbrotImagePath" alt="Mandelbrot Image" />
+            
         </div>
     </div>
 

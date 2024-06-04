@@ -1,3 +1,5 @@
+
+
 module pixel_generator(
 input           out_stream_aclk,
 input           s_axi_lite_aclk,
@@ -36,8 +38,6 @@ input           s_axi_lite_wvalid
 
 );
 
-localparam X_SIZE = 640;
-localparam Y_SIZE = 480;
 localparam REG_FILE_SIZE = 8;
 parameter AXI_LITE_ADDR_WIDTH = 8;
 
@@ -59,7 +59,14 @@ reg [AXI_LITE_ADDR_WIDTH-3:0]       writeAddr, readAddr;
 reg [31:0]                          readData, writeData;
 reg [1:0]                           readState = AWAIT_RADD;
 reg [2:0]                           writeState = AWAIT_WADD_AND_DATA;
+wire X_SIZE = regfile[0];
+wire Y_SIZE = regfile[1];
 
+   initial begin
+        regfile[0] = 32'd640; // Hexadecimal value
+        regfile[1] = 32'd480;
+    end
+    
 //Read from the register file
 always @(posedge s_axi_lite_aclk) begin
     
@@ -139,7 +146,7 @@ always @(posedge s_axi_lite_aclk) begin
 
         AWAIT_WADD: begin //Received data, waiting for address
             if (s_axi_lite_awvalid) begin
-                writeData <= s_axi_lite_wdata;
+                writeAddr <= s_axi_lite_awaddr[7:2];
                 writeState <= AWAIT_WRITE;
             end
         end
@@ -168,28 +175,16 @@ assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 
 
-// Mandelbrot parameters
-localparam integer max_iteration = 100;
-
-parameter integer SCALE_FACTOR = 64; // 2^16 for fixed-point precision
-
-localparam real SCALE_REAL = 4.0 / X_SIZE * SCALE_FACTOR;
-localparam real SCALE_IMAG = 3.0 / Y_SIZE * SCALE_FACTOR;
-localparam real OFFSET_REAL = -3.0 * SCALE_FACTOR; // Real offset to map [-3, 1] in complex plane
-localparam real OFFSET_IMAG = -1.5 * SCALE_FACTOR; // Imaginary offset to map [-1.5, 1.5] in complex plane
-
 reg [9:0] x;
 reg [8:0] y;
 
-wire first = (x == 0) & (y == 0);
+wire first = (x == 0) & (y==0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 
-wire [7:0] red, green, blue;
-
-always @(posedge out_stream_aclk) begin // iterate one pixel per cycle
+always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
-        if (out_stream_tready & out_stream_tvalid) begin
+        if (ready) begin
             if (lastx) begin
                 x <= 9'd0;
                 if (lasty) begin
@@ -199,93 +194,28 @@ always @(posedge out_stream_aclk) begin // iterate one pixel per cycle
                     y <= y + 9'd1;
                 end
             end
-            else begin
-                x <= x + 9'd1;
-            end
+            else x <= x + 9'd1;
         end
-        out_stream_tvalid <= 1'b1;
-        {red, green, blue} <= compute_mandelbrot(x, y);
     end
     else begin
         x <= 0;
         y <= 0;
-        out_stream_tvalid <= 1'b0;
     end
 end
 
+wire valid_int = 1'b1;
 
+wire [7:0] r, g, b;
+assign r = x[7:0];
+assign g = y[7:0];
+assign b = x[6:0]+y[6:0];
 
-function [23:0] compute_mandelbrot;
-    input [9:0] px;
-    input [8:0] py;
-    real cr, ci, zr, zi, zr2, zi2;
-    integer i;
-    reg [15:0] density;
-    reg escape; // Flag to control when to stop iterating
-    begin
-        cr = OFFSET_REAL + px * SCALE_REAL;
-        ci = OFFSET_IMAG + py * SCALE_IMAG;
-        zr = 0;
-        zi = 0;
-        density = 0;
-        escape = 0; // Initialize the escape flag to false
-        for (i = 0; i < max_iteration && !escape; i = i + 1) begin
-            zr2 = zr * zr;
-            zi2 = zi * zi;
-            if (zr2 + zi2 > 4.0) begin
-                escape = 1; // Set the escape flag to true to stop iterating
-            end else begin
-                zi = 2 * zr * zi + ci;
-                zr = zr2 - zi2 + cr;
-                density = density + 1; // Increment density for paths
-            end
-        end
-        // Simple non-linear color mapping based on density
-        compute_mandelbrot[23:16] = (density * density) % 256;  // Red component
-        compute_mandelbrot[15:8]  = (density * density * density) % 256; // Green component
-        compute_mandelbrot[7:0]   = (density) % 256;  // Blue component
-    end
-endfunction
+packer pixel_packer(    .aclk(out_stream_aclk),
+                        .aresetn(periph_resetn),
+                        .r(r), .g(g), .b(b),
+                        .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
+                        .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+                        .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+                        .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
-
-// Function to generate color based on iteration count
-function [23:0] palette;
-    input [7:0] iter;
-    reg [7:0] r, g, b;
-    begin
-        // Example color palette
-        r = iter * 1; // Red component
-        g = iter * 2; // Green component
-        b = iter * 3; // Blue component
-        palette = {r, g, b};
-    end
-endfunction
-
-always @(*) begin
-    {out_stream_tdata[31:24], out_stream_tdata[23:16], out_stream_tdata[15:8]} = compute_mandelbrot(x, y);
-    out_stream_tdata[7:0] = 8'd0; // Padding the LSB of data with zero
-    out_stream_tkeep = 4'b1111;   // Assuming all bytes are valid
-    out_stream_tlast = lastx & lasty; // End of frame
-    out_stream_tuser = first;     // Indicate the first pixel
-end
-
-// combine 8-bit R, G, B values into 24-bit color
-simulator pixel_simulator(
-    .aclk(out_stream_aclk),
-    .aresetn(periph_resetn),
-    .r(out_stream_tdata[31:24]), 
-    .g(out_stream_tdata[23:16]), 
-    .b(out_stream_tdata[15:8])
-);
-// wire valid_int = 1'b1;
-
-// packer pixel_packer(    .aclk(out_stream_aclk),
-//                         .aresetn(periph_resetn),
-//                         .r(r), .g(g), .b(b),
-//                         .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
-//                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
-//                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
-//                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
-
- 
 endmodule

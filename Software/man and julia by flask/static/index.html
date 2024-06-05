@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot and Julia Sets</title>
+<!--    <link rel="stylesheet" href="styles.css">-->
+</head>
+<body>
+    <h1>Mandelbrot Set</h1>
+    <canvas id="mandelbrotCanvas" width="800" height="800"></canvas>
+    <h1>Julia Set</h1>
+    <canvas id="juliaCanvas" width="800" height="800"></canvas>
+
+    <script>const mandelbrotCanvas = document.getElementById('mandelbrotCanvas');
+const mandelbrotCtx = mandelbrotCanvas.getContext('2d');
+const juliaCanvas = document.getElementById('juliaCanvas');
+const juliaCtx = juliaCanvas.getContext('2d');
+
+// Fetch and display Mandelbrot set
+fetch('http://localhost:5000/mandelbrot')
+    .then(response => response.blob())
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+            mandelbrotCtx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+    });
+
+// Add event listener to fetch and display Julia set on click
+mandelbrotCanvas.addEventListener('click', function(event) {
+    const rect = mandelbrotCanvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const cr = -2.0 + (3.0 * x / mandelbrotCanvas.width);
+    const ci = -1.5 + (3.0 * y / mandelbrotCanvas.height);
+
+    fetch('http://localhost:5000/julia', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cr: cr, ci: ci }),
+    })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                juliaCtx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        });
+});
+</script>
+</body>
+</html>

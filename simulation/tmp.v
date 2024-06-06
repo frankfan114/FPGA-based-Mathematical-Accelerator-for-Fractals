@@ -36,11 +36,8 @@ module pixel_generator(
 
 );
 
-parameter SCALE_FACTOR = 256;
-parameter OFFSET_REAL = -512;
-parameter RANGE_REAL = 768;
-parameter OFFSET_IMAG = -307;
-parameter RANGE_IMAG = 614;
+
+
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
 localparam REG_FILE_SIZE = 8;
@@ -172,41 +169,56 @@ assign s_axi_lite_wready = (writeState == AWAIT_WADD_AND_DATA || writeState == A
 assign s_axi_lite_bvalid = (writeState == AWAIT_RESP);
 assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
+
 localparam max_iteration = 100;
+
+// parameter REAL_OFFSET = -2.0;  // Corresponding to -2.0 in floating point
+// parameter REAL_RANGE = 3.0;    // Width of 3 in the real axis
+// parameter IMAG_OFFSET = -1.5;  // Corresponding to -1.5 in floating point
+// parameter IMAG_RANGE = 3.0;    // Height of 3 in the imaginary axis
+
+localparam REAL_OFFSET = 32'hC0000000; // Corresponding to -2.0 in floating point
+localparam REAL_RANGE = 32'h40400000;  // Corresponding to 3.0 in floating point
+localparam IMAG_OFFSET = 32'hBF800000; // Corresponding to -1.5 in floating point
+localparam IMAG_RANGE = 32'h40400000;  // Corresponding to 3.0 in floating point
 
 localparam [1:0]
     START = 2'b01,
     ITERATE = 2'b10,
     OUTPUT = 2'b11;
-
-
-
 reg [1:0]            state = START;
 
+// Floating-point wires and registers
+reg [31:0] zr, zi, c_re, c_im;
+wire [31:0] zr_squared, zi_squared, two_zr_zi, zr_new, zi_new;
+wire [31:0] zr_temp, zi_temp;
+
+
+// Instantiate floating-point operations
+fp_mult mult_zr_square (.clk(out_stream_aclk), .a(zr), .b(zr), .result(zr_squared));
+fp_mult mult_zi_square (.clk(out_stream_aclk), .a(zi), .b(zi), .result(zi_squared));
+fp_mult mult_two_zr_zi (.clk(out_stream_aclk), .a(zr), .b(zi), .result(two_zr_zi));
+fp_add sub_zr_zi_squared (.clk(out_stream_aclk), .a(zr_squared), .b(~zi_squared + 1), .result(zr_temp)); // zr_squared - zi_squared
+fp_add add_zr_temp_c_re (.clk(out_stream_aclk), .a(zr_temp), .b(c_re), .result(zr_new)); // zr_temp + c_re
+fp_add add_two_zr_zi_c_im (.clk(out_stream_aclk), .a(two_zr_zi), .b(c_im), .result(zi_new)); // 2*zr*zi + c_im
 
 reg [9:0] x; 
 reg [8:0] y;
 reg [7:0] iter_count;
-reg [63:0] zr, zi ;
-wire [63:0 ] c_im, c_re,zr2, zi2;
 wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 wire [23:0] color;
 
-assign     c_re = OFFSET_REAL + x * RANGE_REAL / X_SIZE;
-assign     c_im = OFFSET_IMAG + y * RANGE_IMAG / Y_SIZE;
-
-assign    zr2 = (zr * zr);  // Correct the scale by shifting right by the number of fraction bits
-assign    zi2 = (zi * zi);  // Correct the scale
-
 always @(posedge out_stream_aclk) begin
-case(state)
+        case(state)
             START: begin
             if (periph_resetn) begin
                 iter_count <= 0;
-                zr <= c_re;  
-                zi <= c_im;  
+                c_re <= REAL_OFFSET + (REAL_RANGE * x / X_SIZE); 
+                c_im <= IMAG_OFFSET + (IMAG_RANGE * y / Y_SIZE);
+                zr <= 0;  
+                zi <= 0;  
                 state <= ITERATE;
             end
             else begin
@@ -218,15 +230,15 @@ case(state)
 
             ITERATE: begin
             if (periph_resetn) begin
-                
-                if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
+                // temp_zr = zr_squared - zi_squared + c_re;
+                // temp_zi = two_zr_zi + c_im;
+                if ((zr_squared + zi_squared > 32'h40800000) || iter_count == max_iteration-1) begin
                     iter_count <= iter_count+1;
                     state <= OUTPUT;
-                    
-                end 
-                else begin
-                    zr <= (zr2 - zi2) + c_re;
-                    zi <= (2 * zr * zi) + c_im;
+                end else begin
+                    zr <= zr_new; // Changed temp_zr to zr_new
+                    zi <= zi_new; // Changed temp_zi to zi_new
+
                     iter_count <= iter_count + 1;
                     state <= ITERATE;
                 end
@@ -240,6 +252,7 @@ case(state)
 
             OUTPUT: begin
             if (periph_resetn) begin 
+                iter_count <= 0;
                 zr <= 0;
                 zi <= 0;
                 if (lastx) begin
@@ -276,12 +289,12 @@ reg [23:0] data;
 
 always @(*) begin
     if ((iter_count == max_iteration))begin
-        data = 24'b0; 
+        data = 24'h000000; 
     end
     else begin
-        data[23:16] = iter_count % 256;
-        data[15:8] =  (iter_count*2) %256 ;
-        data[7:0] = (iter_count*3) %256;
+        data[23:16] = (iter_count*3 ) % 256;  // Red component based on iteration count
+        data[15:8] = (iter_count*2) % 256;  // Green component
+        data[7:0] = (iter_count*1) % 256;  // Blue component
     end
 end
 
@@ -291,14 +304,15 @@ assign g = data[15:8];
 assign b = data[7:0];
 
 
-simulator pixel_simulator(
-.aclk(aclk),
-.aresetn(aresetn),
-.r(r),
-.g(g),
-.b(b),
-.simu_stream_tdata(color)
-);
+    simulator pixel_simulator(
+    .aclk(aclk),
+    .aresetn(aresetn),
+    .r(r),
+    .g(g),
+    .b(b),
+    .simu_stream_tdata(color), 
+    .valid(valid)
+    );
 
     // packer pixel_packer(    .aclk(out_stream_aclk),
     //                     .aresetn(periph_resetn),

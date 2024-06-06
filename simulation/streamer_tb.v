@@ -49,7 +49,7 @@ initial begin
     #20 rst = 1;
     $dumpfile("test.vcd");
     $dumpvars(0, pixel_generator_tb);
-    #350000000 $finish;
+    #200000000 $finish;
 end
 
 endmodule

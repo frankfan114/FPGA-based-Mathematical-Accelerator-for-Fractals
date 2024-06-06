@@ -55,8 +55,6 @@ localparam AXI_OK = 2'b00;
 localparam AXI_ERR = 2'b10;
 
 reg [31:0]                          regfile [REG_FILE_SIZE-1:0];
-regfile[0] = 640;
-regfile[1] = 480;
 reg [AXI_LITE_ADDR_WIDTH-3:0]       writeAddr, readAddr;
 reg [31:0]                          readData, writeData;
 reg [1:0]                           readState = AWAIT_RADD;
@@ -173,13 +171,17 @@ assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 reg [9:0] x;
 reg [8:0] y;
 
+// wire first = (x == 0) & (y==0);
+// wire lastx = (x == regfile[0] - 1);
+// wire lasty = (y == regifile[1] - 1);
+
 wire first = (x == 0) & (y==0);
-wire lastx = (x == regfile[0] - 1);
-wire lasty = (y == regifile[1] - 1);
+wire lastx = (x == X_SIZE - 1);
+wire lasty = (y == Y_SIZE - 1);
 
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
-        if (ready) begin
+        if (ready & valid_int) begin
             if (lastx) begin
                 x <= 9'd0;
                 if (lasty) begin

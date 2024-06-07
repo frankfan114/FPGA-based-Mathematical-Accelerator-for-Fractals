@@ -36,26 +36,22 @@ module pixel_generator(
 
 );
 
-reg switch=1;
-localparam color1 = 2;
-localparam color2 =3;
 parameter SCALE_FACTOR = 256;
+parameter OFFSET_REAL = -512;
+parameter RANGE_REAL = 768;
+parameter OFFSET_IMAG = -307;
+parameter RANGE_IMAG = 614;
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
 localparam REG_FILE_SIZE = 8;
 parameter AXI_LITE_ADDR_WIDTH = 8;
-
-
-localparam  SCALE_REAL = 768;
-localparam  SCALE_IMAG = 614;
-localparam  OFFSET_REAL = -384;
-localparam  OFFSET_IMAG = -307;
 
 localparam AWAIT_WADD_AND_DATA = 3'b000;
 localparam AWAIT_WDATA = 3'b001;
 localparam AWAIT_WADD = 3'b010;
 localparam AWAIT_WRITE = 3'b100;
 localparam AWAIT_RESP = 3'b101;
+
 localparam AWAIT_RADD = 2'b00;
 localparam AWAIT_FETCH = 2'b01;
 localparam AWAIT_READ = 2'b10;
@@ -191,46 +187,26 @@ reg [1:0]            state = START;
 reg [9:0] x; 
 reg [8:0] y;
 reg [7:0] iter_count;
-reg [15:0] density;
 reg signed [31:0] zr, zi, zr2, zi2, c_im, c_re;
 wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 wire [23:0] color;
 
-always @(*) begin
-    if (switch) begin
-        c_re = -213;
-        c_im = -59;
-    end else begin
-        c_re = OFFSET_REAL + x * SCALE_REAL / X_SIZE;
-        c_im = OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
-    end
-end
-
-
 always @(posedge out_stream_aclk) begin
 case(state)
             START: begin
             if (periph_resetn) begin
                 iter_count <= 0;
+                    //  c_re = -2 + ((x * 3) / X_SIZE);  // -2.0 * 256 + (3.0 * 256 / 640) * x
+                    //  c_im = -1 + ((y *2 ) / Y_SIZE);  // -1.2 * 256 + (2.4 * 256 / 480) * y
 
-                if (switch)begin
-                    density <= 0;
-                    zr <= OFFSET_REAL + x * SCALE_REAL/ X_SIZE;
-                    zi <= OFFSET_IMAG + y * SCALE_IMAG/ Y_SIZE;
-                end
-                else begin
-                    
-                    zr <= 0; 
-                    zi <= 0;  
+                     c_re = OFFSET_REAL + x * RANGE_REAL / X_SIZE;
+                     c_im = OFFSET_IMAG + y * RANGE_IMAG / Y_SIZE;
+                     zr <= 0;  // 初始化为当前点对应的复数平面坐标
+                      zi <= 0;  // 初始化为当前点对应的复数平面坐标
         
-                end
-                
-            
-
                 state <= ITERATE;
-
             end
             else begin
                 x <= 0;
@@ -249,11 +225,8 @@ case(state)
                     
                 end 
                 else begin
-                
                     zr <= (zr2 - zi2) + c_re;
                     zi <= (2 * zr * zi) / SCALE_FACTOR + c_im;
-                    density = density + 1;
-
                     iter_count <= iter_count + 1;
                     state <= ITERATE;
                 end
@@ -303,29 +276,14 @@ assign valid = (state == OUTPUT);
 reg [23:0] data; 
 
 always @(*) begin
-    if(switch) begin
-        if (density == max_iteration) begin
-                data[23:16] = 0;
-                data[15:8]  = 0;
-                data[7:0]  = 0; 
-        end
-        else begin
-            data[23:16] = (( density*density )* color2) % 256;  // Red component based on iteration count
-            data[15:8] = ((density*density )*color1) % 256;  // Green component
-            data[7:0] = (density*density) % 256;  // Blue component
-        end
+    if ((iter_count == max_iteration))begin
+        data = 24'b0; 
     end
     else begin
-        if ((iter_count == max_iteration))begin
-        data = 24'b0; 
-        end
-        else begin
-            data[23:16] = (iter_count*3 ) % 256;  // Red component based on iteration count
-            data[15:8] = (iter_count*2) % 256;  // Green component
-            data[7:0] = (iter_count*1) % 256;  // Blue component
-        end
+        data[23:16] = (iter_count*3 ) % 256;  // Red component based on iteration count
+        data[15:8] = (iter_count*2) % 256;  // Green component
+        data[7:0] = (iter_count*1) % 256;  // Blue component
     end
-        
 end
 
 wire [7:0] r, g, b;
@@ -334,23 +292,24 @@ assign g = data[15:8];
 assign b = data[7:0];
 
 
-    simulator pixel_simulator(
-    .aclk(aclk),
-    .aresetn(aresetn),
-    .r(r),
-    .g(g),
-    .b(b),
-    .simu_stream_tdata(color), 
-    .valid(valid)
-    );
+    // simulator pixel_simulator(
+    // .aclk(aclk),
+    // .aresetn(aresetn),
+    // .r(r),
+    // .g(g),
+    // .b(b),
+    // .simu_stream_tdata(color), 
+    // .valid(valid)
+    // );
 
-// packer pixel_packer(    .aclk(out_stream_aclk),
-//                     .aresetn(periph_resetn),
-//                     .r(r), .g(g), .b(b),
-//                     .eol(lastx), .in_stream_ready(ready), .valid(valid), .sof(first),
-//                     .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
-//                     .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
-//                     .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
+packer pixel_packer(    .aclk(out_stream_aclk),
+                    .aresetn(periph_resetn),
+                    .r(r), .g(g), .b(b),
+                    .eol(lastx), .in_stream_ready(ready), .valid(valid), .sof(first),
+                    .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+                    .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+                    .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
                        
 endmodule
+

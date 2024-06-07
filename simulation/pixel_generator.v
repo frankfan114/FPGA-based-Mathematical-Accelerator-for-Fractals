@@ -42,6 +42,9 @@ localparam color2 =3;
 parameter SCALE_FACTOR = 256;
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
+localparam c_re1 = -213;
+localparam  c_im1 = -59;
+
 localparam REG_FILE_SIZE = 8;
 parameter AXI_LITE_ADDR_WIDTH = 8;
 
@@ -198,16 +201,6 @@ wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 wire [23:0] color;
 
-always @(*) begin
-    if (switch) begin
-        c_re = -213;
-        c_im = -59;
-    end else begin
-        c_re = OFFSET_REAL + x * SCALE_REAL / X_SIZE;
-        c_im = OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
-    end
-end
-
 
 always @(posedge out_stream_aclk) begin
 case(state)
@@ -221,13 +214,12 @@ case(state)
                     zi <= OFFSET_IMAG + y * SCALE_IMAG/ Y_SIZE;
                 end
                 else begin
-                    
+                    c_re = OFFSET_REAL + x * SCALE_REAL / X_SIZE;
+                    c_im = OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
                     zr <= 0; 
                     zi <= 0;  
         
                 end
-                
-            
 
                 state <= ITERATE;
 
@@ -249,11 +241,16 @@ case(state)
                     
                 end 
                 else begin
-                
-                    zr <= (zr2 - zi2) + c_re;
-                    zi <= (2 * zr * zi) / SCALE_FACTOR + c_im;
-                    density = density + 1;
-
+                    if (switch) begin
+                        zr <= (zr2 - zi2) + c_re1;
+                        zi <= (2 * zr * zi) / SCALE_FACTOR + c_im1;
+                        density = density + 1;
+                    end
+                    else begin
+                        zr <= (zr2 - zi2) + c_re;
+                        zi <= (2 * zr * zi) / SCALE_FACTOR + c_im;
+                    end
+                    
                     iter_count <= iter_count + 1;
                     state <= ITERATE;
                 end
@@ -304,10 +301,10 @@ reg [23:0] data;
 
 always @(*) begin
     if(switch) begin
-        if (density == max_iteration) begin
-                data[23:16] = 0;
-                data[15:8]  = 0;
-                data[7:0]  = 0; 
+        if (iter_count == max_iteration) begin
+            data[23:16] = 0;
+            data[15:8]  = 0;
+            data[7:0]  = 0; 
         end
         else begin
             data[23:16] = (( density*density )* color2) % 256;  // Red component based on iteration count
@@ -317,11 +314,13 @@ always @(*) begin
     end
     else begin
         if ((iter_count == max_iteration))begin
-        data = 24'b0; 
+            data[23:16] = 0;
+            data[15:8]  = 0;
+            data[7:0]  = 0; 
         end
         else begin
-            data[23:16] = (iter_count*3 ) % 256;  // Red component based on iteration count
-            data[15:8] = (iter_count*2) % 256;  // Green component
+            data[23:16] = (iter_count*color2 ) % 256;  // Red component based on iteration count
+            data[15:8] = (iter_count*color1) % 256;  // Green component
             data[7:0] = (iter_count*1) % 256;  // Blue component
         end
     end
@@ -334,23 +333,23 @@ assign g = data[15:8];
 assign b = data[7:0];
 
 
-    simulator pixel_simulator(
-    .aclk(aclk),
-    .aresetn(aresetn),
-    .r(r),
-    .g(g),
-    .b(b),
-    .simu_stream_tdata(color), 
-    .valid(valid)
-    );
+   simulator pixel_simulator(
+   .aclk(aclk),
+   .aresetn(aresetn),
+   .r(r),
+   .g(g),
+   .b(b),
+   .simu_stream_tdata(color), 
+   .valid(valid)
+   );
 
-// packer pixel_packer(    .aclk(out_stream_aclk),
-//                     .aresetn(periph_resetn),
-//                     .r(r), .g(g), .b(b),
-//                     .eol(lastx), .in_stream_ready(ready), .valid(valid), .sof(first),
-//                     .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
-//                     .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
-//                     .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
+//  packer pixel_packer(    .aclk(out_stream_aclk),
+//                      .aresetn(periph_resetn),
+//                      .r(r), .g(g), .b(b),
+//                      .eol(lastx), .in_stream_ready(ready), .valid(valid), .sof(first),
+//                      .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+//                      .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+//                      .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
                        
 endmodule

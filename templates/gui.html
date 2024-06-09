@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto; 
+        }
+        .result-box {
+            border: 2px solid #007BFF;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .controls-top {
+            width: 80%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .controls-top .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 80%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .preview-area {
+            background-color: #fff;
+            border: 1px solid #000;
+            width: 640px;
+            height: 480px;
+            position: relative;
+        }
+        #preview-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .color-options,
+        .status-area {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            box-sizing: border-box;
+        }
+        .scrollable {
+            max-height: 500px; 
+            overflow-y: auto; 
+            
+        }
+        .buttons,
+        .extra-controls {
+            width: 80%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .black-and-white {
+            filter: grayscale(100%);
+        }
+    </style>
+    <script src="/static/vue.esm-browser.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="controls-top">
+            <form id="mandelbrotForm" @submit.prevent="submitData">
+                <div class="control-group">
+                    
+                    <label for="maxreal">Max Real Part:</label>
+                    <input type="number" id="maxreal" step="any" v-model.number="c_maxre">
+                
+                    <label for="minreal">Min Real Part:</label>
+                    <input type="number" id="minreal" step="any" v-model.number="c_minre">
+                
+                    <label for="maximaginary">Max Imaginary Part:</label>
+                    <input type="number" id="maximaginary" step="any" v-model.number="c_maxim">
+                </div>
+                <div class="control-group">
+                    <label for="minimaginary">Min Imaginary Part:</label>
+                    <input type="number" id="minimaginary" step="any" v-model.number="c_minim">
+
+                
+                    <label for="max-iterations">Max Iterations:</label>
+                    <input type="number" id="iterations" v-model.number="max_iter">
+                
+                    <label for="width">Width:</label>
+                    <input type="number" id="Width" v-model.number="wi">
+                </div>
+                <div class="control-group">
+                    <label for="height">Height:</label>
+                    <input type="number" id="Height" v-model.number="hi">
+                </div>
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <div class="color-options">
+                <h2>Color Options</h2>
+                <input type="radio" id="color" name="color-option" value="color" v-model="colorOption">
+                <label for="color">Color</label>
+                <input type="radio" id="black-white" name="color-option" value="black-white" v-model="colorOption">
+                <label for="black-white">Black & White</label>
+            </div>
+
+            <div class="preview-area">
+                
+                <img id="preview-img"/>
+            </div>
+
+            <div class="status-area">
+                <h2>Status Area</h2>
+                <div id="status-content">
+                    <button @click="fetchMandelbrotResults">Compute Mandelbrot</button>
+                    
+
+
+
+                    <div id = 'status-info' class="scrollable"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button id="move-up">Move Up</button>
+            <button id="move-down">Move Down</button>
+            <button id="move-left">Move Left</button>
+            <button id="move-right">Move Right</button>
+            <button @click="goToPage('julia')">Julia/Man</button>
+            
+            <button @click="saveAsJson">Save as Json</button>
+        </div>
+
+        <div class="extra-controls">
+            <form>
+                <label for="zoom-factor">Zoom Factor:</label>
+                <input type="number" id="zoom_factor" v-model.number="zoom_factor">
+                <label for="center-coordinate">Center Coordinate:</label>
+                <input type="number" id="coordinate" v-model.number="coordinate">
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <script type='module'>
+        import { createApp, reactive} from '/static/vue.esm-browser.js';
+
+        createApp({
+            data() {
+                
+                return {
+                    c_maxre: 1,
+                    c_minre: -1,
+                    c_maxim: 1,
+                    c_minim: -1,
+                    max_iter: 100,
+                    hi: 480,
+                    wi: 640,
+                    zoom_factor: 1,
+                    coordinate: 0,
+                    colorOption: 'color',
+                    results: {
+                        total_time: 0,
+                        overall_throughput: 0,
+                        latency: 0
+                    }
+                    
+                };
+            },
+            setup() {
+                const results = reactive({
+                    total_time: 0,
+                    overall_throughput: 0,
+                    latency: 0
+                });
+
+
+                function saveAsJson() {
+                    const statusContent = document.getElementById('status-content');
+                    const textContent = statusContent.innerText;
+                    const blob = new Blob([textContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'mandelbrot_results.json';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                }
+
+                
+                function fetchMandelbrotResults() {
+                    fetch('http://146.169.130.117:5001')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        
+                        results.total_time = data.total_time;
+                        results.overall_throughput = data.overall_throughput;
+                        results.latency = data.latency;
+                        const statusContent = document.getElementById('status-info');
+                        statusContent.insertAdjacentHTML('afterbegin', `
+                            
+                            <div class="result-box">
+                                <p>Total Time: ${results.total_time} seconds</p>
+                                <p>Overall Throughput: ${results.overall_throughput} pixels per second</p>
+                                <p>Latency: ${results.latency} seconds per pixel</p>
+                            </div>
+                        `);
+                            
+
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                    });
+                }
+                
+                function goToPage(pageUrl) {
+                    window.location.href = pageUrl;
+                }
+
+                return {
+                    results,
+                    fetchMandelbrotResults,
+                    goToPage,
+                    saveAsJson
+                };
+            },
+            methods: {
+                submitData() {
+                    const jsonData = {
+                        max_real: this.c_maxre,
+                        min_real: this.c_minre,
+                        max_imaginary: this.c_maxim,
+                        min_imaginary: this.c_minim,
+                        max_iterations: this.max_iter,
+                        height: this.hi,
+                        width: this.wi,
+                        coordinate: this.coordinate,
+                        zoom_factor: this.zoom_factor
+                    };
+                    this.jsonDataString = JSON.stringify(jsonData, null, 2);
+                    fetch('http://146.169.130.117:5001/get_image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(jsonData)
+                    })
+                    .then(response => response.json())
+                    .then(data =>{
+                        if (data.image) {
+                            
+                            document.getElementById('preview-img').src = `data:image/png;base64,${data.image}`;
+                        
+                        
+                        } else {
+                            console.error('Error:', data.error || 'Unknown error');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+                
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

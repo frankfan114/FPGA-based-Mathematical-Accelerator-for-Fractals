@@ -281,15 +281,15 @@ assign valid = (state == OUTPUT);
 reg [23:0] data; 
 
 always @(*) begin
-     if (density == max_iteration) begin
+     if (iter_count == max_iteration) begin
             data[23:16] = 0;
             data[15:8]  = 0;
             data[7:0]  = 0; 
     end
     else begin
-        data[23:16] = ((density * density) + density ) % 256;  // Red component based on iteration count
-        data[15:8] = (density + density) % 256;  // Green component
-        data[7:0] = (density) % 256;  // Blue component
+        data[23:16] = (iter_count) % 256;  // Red component based on iteration count
+        data[15:8] = (iter_count *3) % 256;  // Green component
+        data[7:0] = (iter_count*5) % 256;  // Blue component
     end
 end
 

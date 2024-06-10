@@ -54,8 +54,8 @@
             background-color: #fff;
             border: 1px solid #000;
             flex: 1;
-            max-width: 640px;  /* 修改为 640px */
-            height: 480px;     /* 修改为 480px */
+            max-width: 640px;
+            height: 480px;
             position: relative;
         }
         .preview-area h3 {
@@ -84,17 +84,6 @@
         .scrollable {
             max-height: 500px;
             overflow-y: auto;
-        }
-        .buttons,
-        .extra-controls {
-            width: 100%;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            margin-top: 10px;
         }
         button {
             padding: 10px;
@@ -166,7 +155,6 @@
                     latency: 0
                 });
 
-
                 function saveAsJson() {
                     const statusContent = document.getElementById('status-content');
                     const textContent = statusContent.innerText;
@@ -180,8 +168,8 @@
                 }
 
                 function fetchMandelbrotResults() {
-                    fetch('http://localhost:5000/mandelbrot')
-                       .then(response => response.json())
+                    fetch(`http://${window.location.hostname}:5000/mandelbrot`)
+                        .then(response => response.json())
                         .then(response => {
                             let base64Image = response.image;
                             const img = new Image();
@@ -211,7 +199,7 @@
                     juliaResults.cr = cr;
                     juliaResults.ci = ci;
 
-                    fetch('http://localhost:5000/julia', {
+                    fetch(`http://${window.location.hostname}:5000/julia`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -267,7 +255,7 @@
                         coordinate: this.coordinate,
                         zoom_factor: this.zoom_factor
                     };
-                    fetch('/gui', {
+                    fetch(`http://${window.location.hostname}:5000/gui`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -314,6 +302,7 @@
                     <input type="number" id="Height" v-model.number="hi">
                 </div>
                 <button type="submit">Submit</button>
+                <button type="button" @click="fetchJuliaResults">Video</button>
             </form>
         </div>
 
@@ -348,25 +337,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="buttons">
-            <button id="move-up">Move Up</button>
-            <button id="move-down">Move Down</button>
-            <button id="move-left">Move Left</button>
-            <button id="move-right">Move Right</button>
-            <button @click="fetchJuliaResults">Video</button>
-            <button @click="saveAsJson">Save as Json</button>
-        </div>
-
-        <div class="extra-controls">
-            <form>
-                <label for="zoom-factor">Zoom Factor:</label>
-                <input type="number" id="zoom_factor" v-model.number="zoom_factor">
-                <label for="center-coordinate">Center Coordinate:</label>
-                <input type="number" id="coordinate" v-model.number="coordinate">
-                <button type="submit">Submit</button>
-            </form>
         </div>
     </div>
 </body>

@@ -39,7 +39,7 @@ pixel_generator uut (
 );
 
 // Assigning the stream control signals in the testbench
-assign valid = 1'b1;
+// assign valid = 1'b1;
 assign keep = 4'b1111;
 assign last = (uut.x == (uut.X_SIZE - 1)) && (uut.y == (uut.Y_SIZE - 1));
 assign user = (uut.x == 0) && (uut.y == 0);
@@ -49,7 +49,7 @@ initial begin
     #20 rst = 1;
     $dumpfile("test.vcd");
     $dumpvars(0, pixel_generator_tb);
-    #3500000 $finish;
+    #20000000 $finish;
 end
 
 endmodule

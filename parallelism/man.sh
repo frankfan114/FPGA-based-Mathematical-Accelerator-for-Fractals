@@ -1,5 +1,5 @@
 #!/bin/bash
-DUT="simulator.v pixel_generator.v" #把mandelbrot.v改名
+DUT="man.v packer.v simulator.v" #把mandelbrot.v改名
 TEST_BENCH="streamer_tb.v"
 OBJ="stream"
 WAVE="test.vcd"
@@ -8,7 +8,7 @@ PYTHON_SCRIPT="24pure.py"
 # Function to compile Verilog files
 comp() {
     echo "Compiling $DUT"
-    iverilog -o $OBJ $TEST_BENCH $DUT
+    iverilog -o $OBJ $DUT $TEST_BENCH
 }
 
 # Function to run the simulation

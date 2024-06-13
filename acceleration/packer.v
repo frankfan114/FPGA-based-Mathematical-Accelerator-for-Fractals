@@ -27,9 +27,7 @@ reg             sof_reg;
 reg [7:0]       last_r, last_g, last_b;
 
 //Combinational
-// reg [31:0]      tdata;
-reg [23:0]      tdata;
-
+reg [31:0]      tdata;
 reg             tvalid;
 reg             ready;
 
@@ -77,40 +75,32 @@ always @* begin
         2'b00 : 
             begin 
                 //Output is not complete (valid) in this state, that means we are always ready for the next pixel.
-                // tdata = {g, last_r, last_b, last_g}; //don't care since valid is false - just copy another state 
-                tdata = {r, b, g};
+                tdata = {g, last_r, last_b, last_g}; //don't care since valid is false - just copy another state 
                 tvalid = 1'b0;
                 ready = 1'b1;
             end
         2'b01 :
             begin 
-                // tdata = {g, last_r, last_b, last_g};
-                tdata = {r, b, g};
-
+                tdata = {g, last_r, last_b, last_g};
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         2'b10 : 
             begin 
-                // tdata = {b, g, last_r, last_b};
-                tdata = {r, b, g};
-
+                tdata = {b, g, last_r, last_b};
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         2'b11 : 
             begin 
-                // tdata = {r, b, g, last_r};
-                tdata = {r, b, g};
-
+                tdata = {r, b, g, last_r};
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         default : 
             begin 
                 //Output is not complete (valid) in this state, that means we are always ready for the next pixel.
-                // tdata = {g, last_r, last_b, last_g}; //don't care since valid is false - just copy another state 
-                tdata = {r, b, g};
+                tdata = {g, last_r, last_b, last_g}; //don't care since valid is false - just copy another state 
                 tvalid = 1'b0;
                 ready = 1'b1;
             end

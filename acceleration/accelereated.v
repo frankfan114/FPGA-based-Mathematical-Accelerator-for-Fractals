@@ -512,24 +512,24 @@ assign b = (pixel_pass == GEN) ? (pixel_buffer[7:0]) : (pixel_buffer1[7:0]);
 
 assign yuchin = ((valid||enter) && out_stream_tready);
 
-wire [23:0] color;
-simulator pixel_simulator(
-.aclk(aclk),
-.aresetn(aresetn),
-.r(g),
-.g(b),
-.b(r),
-.simu_stream_tdata(color), 
-.valid(valid||enter)
-);
+// wire [23:0] color;
+// simulator pixel_simulator(
+// .aclk(aclk),
+// .aresetn(aresetn),
+// .r(g),
+// .g(b),
+// .b(r),
+// .simu_stream_tdata(color), 
+// .valid(valid||enter)
+// );
 
-// packer pixel_packer(    .aclk(out_stream_aclk),
-//                     .aresetn(periph_resetn),
-//                     .r(r), .g(g), .b(b),
-//                     .eol(lastx), .in_stream_ready(ready), .valid(valid||enter), .sof(first),
-//                     .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
-//                     .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
-//                     .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
+packer pixel_packer(    .aclk(out_stream_aclk),
+                    .aresetn(periph_resetn),
+                    .r(r), .g(g), .b(b),
+                    .eol(lastx), .in_stream_ready(ready), .valid(valid||enter), .sof(first),
+                    .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+                    .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+                    .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
                        
 endmodule

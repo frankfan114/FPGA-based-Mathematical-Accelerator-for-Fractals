@@ -161,7 +161,9 @@ end
 assign s_axi_lite_awready = (writeState == AWAIT_WADD_AND_DATA || writeState == AWAIT_WADD);
 assign s_axi_lite_wready = (writeState == AWAIT_WADD_AND_DATA || writeState == AWAIT_WDATA);
 assign s_axi_lite_bvalid = (writeState == AWAIT_RESP);
-assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
+assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;\
+
+//
 
 initial begin
    regfile[0] = 32'h3000266;
@@ -187,18 +189,24 @@ localparam Y_SIZE = 480;
 localparam [2:0]
     MSTART = 3'b000,
     MITERATE = 3'b001,
-    OUTPUT = 3'b010,
+    MOUTPUT = 3'b010,
     JSTART = 3'b011,
-    JITERATE = 3'b100;
-//    MWAIT = 3'b110,
-//    JWAIT = 3'b111;
+    JITERATE = 3'b100,
+    JOUTPUT = 3'b101,
+    MWAIT = 3'b110,
+    JWAIT = 3'b111;
 
-reg [2:0]  state = MSTART; 
+reg [2:0]  state = MSTART;
+
+localparam [1:0]
+    GEN = 2'b00,
+    PASS = 2'b01;
+reg [1:0]            pixel_pass = GEN;
+
 wire switch = (max_iteration == 8'd80);
-reg [15:0] x; 
-reg [15:0] y;
+reg [15:0] x, x1; 
+reg [15:0] y, ;
 reg [7:0] iter_count;
-reg [7:0] iter_final;
 
 reg signed [31:0] zr, zi, c_im, c_re, zr2, zi2;
 wire first = (x == 0) & (y == 0);
@@ -209,25 +217,26 @@ always @(posedge out_stream_aclk) begin
 
     case(state)
 
-//        MWAIT:begin
-//            if(out_stream_tready)begin
-//                state <= MSTART;
-//            end else
-//                state <= MWAIT;
-//        end
+        MWAIT:begin
+            if(ready)begin
+                iter_count <= 0;
+                state <= MSTART;
+            end else
+                state <= MWAIT;
+        end
 
 
-//        JWAIT:begin
-//            if(out_stream_tready)begin
-//                state <= JSTART;
-//            end else
-//                state <= JWAIT;
-//        end
+        JWAIT:begin
+            if(ready)begin
+                iter_count <= 0;
+                state <= JSTART;
+            end else
+                state <= JWAIT;
+        end
 
 
         JSTART: begin
             if (periph_resetn) begin
-                iter_count <= 0;
                 zr = -OFFSET_REAL + x * SCALE_REAL/ X_SIZE;
                 zi = -OFFSET_IMAG + y * SCALE_IMAG/ Y_SIZE;
                 state <= JITERATE;
@@ -246,8 +255,8 @@ always @(posedge out_stream_aclk) begin
                 zi2 = (zi * zi) / SCALE_FACTOR;  
 
                 if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
-                    iter_final <= iter_count+1;
-                    state <= OUTPUT;                  
+                    iter_count <= iter_count+1;
+                    state <= JOUTPUT;                  
                 end
 
                 else begin
@@ -264,6 +273,40 @@ always @(posedge out_stream_aclk) begin
                 state <= MSTART;
             end
         end
+
+
+        JOUTPUT: begin
+        if (periph_resetn) begin
+            
+            if (lastx) begin
+                x <= 16'd0;
+                if (lasty) begin
+                    y <= 16'd0;
+                end
+                else begin
+                    y <= y + 16'd1;
+                end
+            end
+            else begin x <= x + 16'd1;
+            end
+            if(out_stream_tready)begin
+                iter_count <= 0;
+                if(switch) begin
+                    state <= JSTART; 
+                 end
+                else begin 
+                    state <= MSTART;
+                end
+            end 
+            else state <= JWAIT;
+        end
+        else begin
+            x <= 0;
+            y <= 0;
+            state <= MSTART;
+        end
+        end
+
 
     // mandelbrot 
         MSTART: begin
@@ -290,8 +333,8 @@ always @(posedge out_stream_aclk) begin
                 zi2 = (zi * zi) / SCALE_FACTOR;  
 
                 if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
-                    iter_final <= iter_count+1;
-                    state <= OUTPUT;
+                    iter_count <= iter_count+1;
+                    state <= MOUTPUT;
 
                 end 
                 else begin
@@ -309,7 +352,7 @@ always @(posedge out_stream_aclk) begin
         end
 
 
-        OUTPUT: begin
+        MOUTPUT: begin
         if (periph_resetn) begin
             if(ready)begin
                 if (lastx) begin
@@ -330,7 +373,7 @@ always @(posedge out_stream_aclk) begin
                     state <= MSTART;
                 end
             end
-            else state <= OUTPUT;
+            else state <= MWAIT;
         end
         else begin
             x <= 0;
@@ -345,19 +388,20 @@ always @(posedge out_stream_aclk) begin
     endcase
 end
 
-wire Pixel_valid = (state == OUTPUT);
-wire yuchin = (ready && Pixel_valid);
-
+wire Mvalid = ((state == MOUTPUT) || (state == MWAIT));
+wire Jvalid = ((state == JOUTPUT) || (state == JWAIT));
+wire yuchin = (out_stream_tready && ( Mvalid || Jvalid));
 reg [23:0] data; 
 
 always @(*) begin
-    if (iter_count == max_iteration-1) begin
+    if (iter_count == max_iteration) begin
         data = 0;
     end
     else begin
-            data[23:16] = iter_final;  // Red component based on iteration count
-            data[15:8] = (iter_final * regfile[1][15:8]);  // Green component
-            data[7:0] = (iter_final * regfile[1][23:16]);  // Blue component
+        // if(state == MOUTPUT || state == JOUTPUT) begin
+            data[23:16] = iter_count;  // Red component based on iteration count
+            data[15:8] = (iter_count * regfile[1][15:8]);  // Green component
+            data[7:0] = (iter_count * regfile[1][23:16]);  // Blue component
         // end
         
     end
@@ -368,11 +412,20 @@ assign r = data[23:16];
 assign g = data[15:8];
 assign b = data[7:0];
 
+// simulator pixel_simulator(
+// .aclk(aclk),
+// .aresetn(aresetn),
+// .r(r),
+// .g(g),
+// .b(b),
+// .simu_stream_tdata(color), 
+// .valid(Jvalid || Mvalid)
+// );
 
  packer pixel_packer(    .aclk(out_stream_aclk),
                          .aresetn(periph_resetn),
-                         .r(r), .g(g), .b(b),
-                         .eol(lastx), .in_stream_ready(ready), .valid(Pixel_valid), .sof(first),
+                         .r(g), .g(b), .b(r),
+                         .eol(lastx), .in_stream_ready(ready), .valid(Jvalid || Mvalid), .sof(first),
                          .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                          .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                          .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );

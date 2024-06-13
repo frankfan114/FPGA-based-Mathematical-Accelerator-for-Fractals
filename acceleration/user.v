@@ -205,15 +205,24 @@ wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 
-reg tmp_valid;
-
 always @(posedge out_stream_aclk) begin
 
     case(state)
 
         MWAIT:begin
-            if(out_stream_tready)begin
-                tmp_valid<=0;
+            if(ready)begin
+                if (lastx) begin
+                    x <= 16'd0;
+                    if (lasty) begin
+                        y <= 16'd0;
+                    end
+                    else begin
+                        y <= y + 16'd1;
+                    end
+                end
+                else begin x <= x + 16'd1;
+                end
+                
                 iter_count <= 0;
                 state <= MSTART;
             end else
@@ -222,7 +231,19 @@ always @(posedge out_stream_aclk) begin
 
 
         JWAIT:begin
-            if(out_stream_tready)begin
+            if(ready)begin
+                if (lastx) begin
+                    x <= 16'd0;
+                    if (lasty) begin
+                        y <= 16'd0;
+                    end
+                    else begin
+                        y <= y + 16'd1;
+                    end
+                end
+                else begin x <= x + 16'd1;
+                end
+
                 iter_count <= 0;
                 state <= JSTART;
             end else
@@ -272,20 +293,21 @@ always @(posedge out_stream_aclk) begin
 
         JOUTPUT: begin
         if (periph_resetn) begin
-            
-            if (lastx) begin
-                x <= 16'd0;
-                if (lasty) begin
-                    y <= 16'd0;
-                end
-                else begin
-                    y <= y + 16'd1;
-                end
-            end
-            else begin x <= x + 16'd1;
-            end
-            if(out_stream_tready)begin
+            if(ready)begin
                 iter_count <= 0;
+
+                if (lastx) begin
+                    x <= 16'd0;
+                    if (lasty) begin
+                        y <= 16'd0;
+                    end
+                    else begin
+                        y <= y + 16'd1;
+                    end
+                end
+                else begin x <= x + 16'd1;
+                end
+                
                 if(switch) begin
                     state <= JSTART; 
                  end
@@ -306,7 +328,7 @@ always @(posedge out_stream_aclk) begin
     // mandelbrot 
         MSTART: begin
             if (periph_resetn) begin
-                // iter_count <= 0;
+                iter_count <= 0;
                 c_re = -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
                 c_im = -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
                 zr <= 0; 
@@ -330,7 +352,6 @@ always @(posedge out_stream_aclk) begin
                 if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
                     iter_count <= iter_count+1;
                     state <= MOUTPUT;
-                    tmp_valid = 1;
 
                 end 
                 else begin
@@ -350,19 +371,18 @@ always @(posedge out_stream_aclk) begin
 
         MOUTPUT: begin
         if (periph_resetn) begin
-            if (lastx) begin
-                x <= 16'd0;
-                if (lasty) begin
-                    y <= 16'd0;
+            if(ready)begin
+                if (lastx) begin
+                    x <= 16'd0;
+                    if (lasty) begin
+                        y <= 16'd0;
+                    end
+                    else begin
+                        y <= y + 16'd1;
+                    end
                 end
-                else begin
-                    y <= y + 16'd1;
-                end
-            end
-            else x <= x + 16'd1;
-            if(out_stream_tready)begin
-                iter_count <= 0;
-                tmp_valid<=0;
+                else x <= x + 16'd1;
+
                 if(switch)begin
                     state <= JSTART;
                 end
@@ -385,7 +405,7 @@ always @(posedge out_stream_aclk) begin
     endcase
 end
 
-wire Mvalid = ((state == MOUTPUT) || (state == MWAIT) || tmp_valid);
+wire Mvalid = ((state == MOUTPUT) || (state == MWAIT));
 wire Jvalid = ((state == JOUTPUT) || (state == JWAIT));
 wire yuchin = (out_stream_tready && ( Mvalid || Jvalid));
 reg [23:0] data; 
@@ -395,11 +415,11 @@ always @(*) begin
         data = 0;
     end
     else begin
-        if(state == MOUTPUT || state == JOUTPUT) begin
+        // if(state == MOUTPUT || state == JOUTPUT) begin
             data[23:16] = iter_count;  // Red component based on iteration count
             data[15:8] = (iter_count * regfile[1][15:8]);  // Green component
             data[7:0] = (iter_count * regfile[1][23:16]);  // Blue component
-        end
+        // end
         
     end
 end
@@ -409,15 +429,6 @@ assign r = data[23:16];
 assign g = data[15:8];
 assign b = data[7:0];
 
-// simulator pixel_simulator(
-// .aclk(aclk),
-// .aresetn(aresetn),
-// .r(r),
-// .g(g),
-// .b(b),
-// .simu_stream_tdata(color), 
-// .valid(Jvalid || Mvalid)
-// );
 
  packer pixel_packer(    .aclk(out_stream_aclk),
                          .aresetn(periph_resetn),

@@ -1,9 +1,9 @@
 #!/bin/bash
-DUT="simulator.v pixel_generator.v" #把mandelbrot.v改名
+DUT="packer.v pixel_generator.v" #把mandelbrot.v改名
 TEST_BENCH="streamer_tb.v"
 OBJ="stream"
 WAVE="test.vcd"
-PYTHON_SCRIPT="24pure.py"
+PYTHON_SCRIPT="vi.py"
 
 # Function to compile Verilog files
 comp() {

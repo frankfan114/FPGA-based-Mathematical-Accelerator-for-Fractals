@@ -92,7 +92,7 @@ def write_values_to_file(values, output_filename):
 
 # usage:
 filename = 'test.vcd'
-pixels = read_vcd_signal(filename,'simu_stream_tdata','x')
+pixels = read_vcd_signal(filename,'out_stream_tdata','x')
 
 # write_values_to_file(pixels, 'output.txt')
 

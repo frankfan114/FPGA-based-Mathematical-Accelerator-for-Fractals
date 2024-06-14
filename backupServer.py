@@ -1,5 +1,5 @@
 from PIL import Image, ImageTk
-from main import total_time, overall_throughput, latency, REAL_MIN, REAL_MAX, IMAG_MIN, IMAG_MAX, HEIGHT, WIDTH, MAX_ITER, frames, frame_path
+#from main import total_time, overall_throughput, latency, REAL_MIN, REAL_MAX, IMAG_MIN, IMAG_MAX, HEIGHT, WIDTH, MAX_ITER, frames, frame_path
 #from mandelbrot2 import total_time, overall_throughput, latency, REAL_MIN, REAL_MAX, IMAG_MIN, IMAG_MAX, HEIGHT, WIDTH, MAX_ITER, frames
 from flask_cors import CORS
 import threading
@@ -12,7 +12,7 @@ import tempfile
 import json
 from tkinter import ttk
 from flask import Flask, send_from_directory, redirect, jsonify, render_template, request, send_file
-
+import glob
 app = Flask(__name__)
 CORS(app)
 
@@ -58,14 +58,18 @@ class VideoPlayer:
         #self.playing = False 
         #self.start()
 
-    def get_next_frame(self):
+    # def get_next_frame(self):
         
+    #     self.current_frame = (self.current_frame + 1) % self.total_frames
+    #     frame = self.frames[self.current_frame]
+    #     # buffered = io.BytesIO()
+    #     # frame.save(buffered, format="JPEG")
+    #     return frame
+    
+    def get_next_frame(self):
+        frame_data = self.frames[self.current_frame]
         self.current_frame = (self.current_frame + 1) % self.total_frames
-        frame = self.frames[self.current_frame]
-        # buffered = io.BytesIO()
-        # frame.save(buffered, format="JPEG")
-        return frame
-
+        return frame_data
     
 
     def play(self):
@@ -106,23 +110,43 @@ def run_video_player():
     video_player.start()
     
 
+# def generate_mandelbrot_frames():
+#     temp_dir = tempfile.gettempdir()
+#     output_path = os.path.join(temp_dir, "mandelbrot_output.json")
+
+#     with open(output_path, "r") as f:
+#         output_data = json.load(f)
+        
+#     generated_frames = []
+#     #frame_path = os.path.join(temp_dir, f"frame_{i}.png")
+    
+#     for frame_path in output_data['frames']:
+        
+#         with open(frame_path, "rb") as f:
+#             generated_frames.append(f.read())
+#     print('1')
+#     return generated_frames
 
     
 def generate_mandelbrot_frames():
-    temp_dir = tempfile.gettempdir()
-    output_path = os.path.join(temp_dir, "mandelbrot_output.json")
-
-    with open(output_path, "r") as f:
-        output_data = json.load(f)
+    global max_iter
+    temp_dir =   tempfile.gettempdir()
+    output_path = os.path.join(temp_dir, "mandelbrot_frame_*.png")
+    frame_paths = glob.glob(output_path)
+    # with open(output_path, "r") as f:
+    #     output_data = json.load(f)
         
     generated_frames = []
     #frame_path = os.path.join(temp_dir, f"frame_{i}.png")
-    
-    for frame_path in output_data['frames']:
+    max_iter = 0
+    for frame_path in frame_paths:
+        iteration = int(os.path.basename(frame_path).split('_')[-1].split('.')[0])
+        max_iter = max(max_iter, iteration)
         
+        #frame_path = os.path.join(temp_dir, f"mandelbrot_frame_{iteration}.png")
         with open(frame_path, "rb") as f:
             generated_frames.append(f.read())
-    print('1')
+    print(max_iter)
     return generated_frames
 
 
@@ -154,11 +178,20 @@ def imp():
     #start_video_player()
     return render_template('import.html')
 
-
+frame = generate_mandelbrot_frames()
+iter = 0
 @app.route('/next_frame')
 def next_frame():
-    #video_player = VideoPlayer(frames)
+    # global iter
+    # frame_data = frame[iter]
+    # if iter <= max_iter:
+    #     iter = iter+1
+    # else:
+    #     iter = 0
+    # #video_player = VideoPlayer(frames)
+    # print(iter)
     frame_data = video_player.get_next_frame()
+    
     return frame_data
 
 
@@ -195,6 +228,12 @@ def gui():
     
     
     return render_template('gui.html')
+
+@app.route('/guibackup')
+def guibackup():
+    
+    
+    return render_template('guibackup.html')
 
 @app.route('/images')
 def get_imagess():
@@ -236,9 +275,21 @@ def get_images():
         max_iterations = data.get('max_iterations')
         height = data.get('height')
         width = data.get('width')
-        zoom_factor = data.get('zoom_factor')
+        zoomin_factor = data.get('zoomin_factor')
+        zoomout_factor = data.get('zoomout_factor')
         coordinate = data.get('coordinate')
-        
+        up = data.get('up')
+        down = data.get('down')
+        left = data.get('left')
+        right = data.get('right')
+        color1 = data.get('color1')
+        color2 = data.get('color2')
+        color3 = data.get('color3')
+        reset  = data.get('reset')
+        zoom_factor = data.get('zoom_factor')
+        julia = data.get('julia')
+        clickX = data.get('clickX')
+        clickY =  data.get('clickY')
         # result = subprocess.run(
         #     ['python', './main.py', str(max_real), str(min_real), str(max_imaginary), str(min_imaginary), str(max_iterations), str(height), str(width)],
         #     capture_output=True,
@@ -266,15 +317,33 @@ def get_images():
                         "max_iterations": max_iterations,
                         "height": height,
                         "width": width,
-                        "zoom_factor": zoom_factor,
-                        "coordinate": coordinate
+                        "zoomin_factor": zoomin_factor,
+                        "zoomout_factor": zoomout_factor,
+                        "coordinate": coordinate,
+                        "color1": color1,
+                        "color2": color2,
+                        "color3": color3,
+                        "up": up,
+                        "down": down,
+                        "left":left,
+                        "right":right,
+                        "reset": reset,
+                        "julia": julia,
+                        "clickX" : clickX,
+                        "clickY": clickY
                     }
                 )
             #encoded_image = base64.b64encode(response.text.encode()).decode('utf-8')
         except:
             print("error")
         
-        return jsonify({"image": response.json()["image"]})
+        return jsonify({"image": response.json()["image"],
+                        "frame_rate": response.json()["frame_rate"],
+                        "pixel_rate": response.json()["pixel_rate"],
+                        "latency": response.json()["latency"],
+                        "total_time":response.json()["total_time"]
+                        
+                        })
 
 
 @app.route('/index.html')

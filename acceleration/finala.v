@@ -241,68 +241,72 @@ always @(posedge out_stream_aclk) begin
         state <= MSTART;
         x <= 0;
         y <= 0;
-    end else begin
+    end 
+
+    else begin
+
         case(state)
             JSTART: begin
-                iter_count <= 0;
-                zr <= -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
-                zi <= -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
-                state <= JCHECK;
-                c_re <= regfile[0][31:16];
-                c_im <= regfile[0][15:0];
+                iter_count = 0;
+                zr = -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
+                zi = -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
+                state = JCHECK;
+                c_re = regfile[0][31:16];
+                c_im = regfile[0][15:0];
             end
+
             JCHECK: begin
-                zr2 <= (zr * zr) / SCALE_FACTOR;  
-                zi2 <= (zi * zi) / SCALE_FACTOR;  
+                zr2 = (zr * zr) / SCALE_FACTOR;  
+                zi2 = (zi * zi) / SCALE_FACTOR;  
                 if (((zr2 + zi2) > limit) || iter_count == max_iteration - 1) begin
-                    iter_final <= iter_count;
-                    state <= OUTPUT;
+                    iter_final = iter_count;
+                    state = OUTPUT;
                 end else begin
-                    state <= JITERATE;
+                    state = JITERATE;
                 end
             end
+
             JITERATE: begin
                 zr <= (zr2 - zi2) - c_re;
                 zi <= (2 * zr * zi) / SCALE_FACTOR + c_im;
                 iter_count <= iter_count + 1;
-                state <= JCHECK;
+                state = JCHECK;
             end
+
             MSTART: begin
-                iter_count <= 0;
-                c_re <= -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
-                c_im <= -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
-                zr <= 0;
-                zi <= 0;
-                state <= MCHECK;
+                iter_count = 0;
+                c_re = -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
+                c_im = -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
+                zr = 0;
+                zi = 0;
+                state = MCHECK;
             end
+
             MCHECK: begin
-                zr2 <= (zr * zr) / SCALE_FACTOR;  
-                zi2 <= (zi * zi) / SCALE_FACTOR;  
+                zr2 = (zr * zr) / SCALE_FACTOR;  
+                zi2 = (zi * zi) / SCALE_FACTOR;  
                 if (((zr2 + zi2) > limit) || iter_count == max_iteration - 1) begin
                     if (stop) begin
-                        state <= MITERATE; 
+                        state = MCHECK; 
                     end else begin
-                        iter_final <= iter_count;
-                        state <= OUTPUT;
+                        iter_final = iter_count;
+                        state = OUTPUT;
                     end
                 end else begin
-                    state <= MITERATE;
+                    state = MITERATE;
                 end
             end
+
             MITERATE: begin
                 zr <= (zr2 - zi2) + c_re;
                 zi <= (2 * zr * zi) / SCALE_FACTOR + c_im;
                 iter_count <= iter_count + 1;
-                state <= MCHECK;
+                state = MCHECK;
             end
+
             OUTPUT: begin
                 if (out_stream_tready && (a_valid || enter)) begin
-                    if (switch) begin
-                        state <= JSTART;
-                    end else begin
-                        state <= MSTART;
-                    end
-
+                    
                     if (lastx) begin
                         x <= 9'd0;
                         if (lasty) begin
@@ -310,16 +314,33 @@ always @(posedge out_stream_aclk) begin
                         end else begin
                             y <= y + 8'd1;
                         end
-                    end else begin
-                        x <= x + 9'd2;                    
                     end 
+                    else begin
+                        if (switch) begin
+                            x <= x + 9'd1;       
+                        end
+                        else begin
+                            x <= x + 9'd2;             
+                        end
+                                   
+                    end
+
+                    if (switch) begin
+                        state <= JSTART;
+                    end 
+                    else begin
+                        state <= MSTART;
+                    end
+
                 end else begin
-                    state <= OUTPUT;
+                    state  = OUTPUT;
                 end
             end
+            
             default: begin
                 state <= MSTART;
             end
+
         endcase
     end
 end
@@ -332,36 +353,39 @@ always @(posedge out_stream_aclk) begin
         state1 <= MSTART;
         x1 <= 1;
         y1 <= 0;
-    end else begin
+    end 
+    else begin
         case(state1)
             MSTART: begin
                 iter_count1 <= 0;
-                c_re1 <= -OFFSET_REAL + x1 * SCALE_REAL / X_SIZE;
-                c_im1 <= -OFFSET_IMAG + y1 * SCALE_IMAG / Y_SIZE;
-                zr1 <= 0;
-                zi1 <= 0;
-                state1 <= MCHECK;
+                c_re1 = -OFFSET_REAL + x1 * SCALE_REAL / X_SIZE;
+                c_im1 = -OFFSET_IMAG + y1 * SCALE_IMAG / Y_SIZE;
+                zr1 = 0;
+                zi1 = 0;
+                state1 = MCHECK;
             end
             MCHECK: begin
-                zr21 <= (zr1 * zr1) / SCALE_FACTOR;  
-                zi21 <= (zi1 * zi1) / SCALE_FACTOR;  
+                zr21 = (zr1 * zr1) / SCALE_FACTOR;  
+                zi21 = (zi1 * zi1) / SCALE_FACTOR;  
                 if (((zr21 + zi21) > (limit)) || iter_count1 == max_iteration - 1) begin
                     if (stop) begin
-                        state1 <= MITERATE;
+                        state1 = MCHECK;
                     end else begin
-                        iter_final1 <= iter_count1;
-                        state1 <= OUTPUT;
+                        iter_final1 = iter_count1;
+                        state1 = OUTPUT;
                     end 
                 end else begin
-                    state1 <= MITERATE;
+                    state1 = MITERATE;
                 end
             end
+
             MITERATE: begin
                 zr1 <= (zr21 - zi21) + c_re1;
                 zi1 <= (2 * zr1 * zi1) / SCALE_FACTOR + c_im1;
                 iter_count1 <= iter_count1 + 1;
-                state1 <= MCHECK;
+                state1 = MCHECK;
             end
+            
             OUTPUT: begin
                 if ((pixel_pass == PASS) && out_stream_tready) begin
                     if (lastx1) begin
@@ -371,14 +395,17 @@ always @(posedge out_stream_aclk) begin
                         end else begin
                             y1 <= y1 + 8'd1;
                         end
-                    end else begin
+                    end 
+                    else begin
                         x1 <= x1 + 9'd2;
                     end
                     state1 <= MSTART;
-                end else begin
-                    state1 <= OUTPUT;
+                end 
+                else begin
+                    state1 = OUTPUT;
                 end
             end
+
             default: begin
                 state1 <= MSTART;
             end
@@ -392,32 +419,25 @@ reg [23:0] data, data1;
 
 always @(*) begin
     if (iter_count == max_iteration-1) begin
-        // data = 24'b0;
-        data = 24'b111111111111111111111111;
+        // data = 24'b111111111111111111111111;
+        data =24'b0;
     end
     else begin
         data[23:16] = iter_final;  // Red component based on iteration count
         data[15:8] = (iter_final * regfile[1][15:8]);  // Green component
-        data[7:0] = (iter_final *regfile[1][23:16]);  // Blue component
-        // data[23:16] = 0;  // Red component based on iteration count
-        // data[15:8] = 255;  // Green component
-        // data[7:0] = 0;  // Blue component
-        
+        data[7:0] = (iter_final *regfile[1][23:16]);  // Blue component        
     end
 end
 
 always @(*) begin
     if (iter_count1 == max_iteration-1) begin
-        data1 = 24'b111111111111111111111111;
+        // data1 = 24'b111111111111111111111111;
+        data1 =24'b0;
     end
     else begin
         data1[23:16] = iter_final1;  // Red component based on iteration count
         data1[15:8] = (iter_final1 * regfile[1][15:8]);  // Green component
-        data1[7:0] = (iter_final1 *regfile[1][23:16]);  // Blue component
-        // data1[23:16] = 0;  // Red component based on iteration count
-        // data1[15:8] = 0;  // Green component
-        // data1[7:0] = 0;  // Blue component
-    
+        data1[7:0] = (iter_final1 *regfile[1][23:16]);  // Blue component    
     end
 end
 

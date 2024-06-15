@@ -376,24 +376,24 @@ assign r = data[23:16];
 assign g = data[15:8];
 assign b = data[7:0];
 
-// wire [23:0] color;
-//  simulator pixel_simulator(
-//  .aclk(aclk),
-//  .aresetn(aresetn),
-//  .r(r),
-//  .g(g),
-//  .b(b),
-//  .simu_stream_tdata(color), 
-//  .valid(Pixel_valid)
-//  );
+wire [23:0] color;
+ simulator pixel_simulator(
+ .aclk(aclk),
+ .aresetn(aresetn),
+ .r(r),
+ .g(g),
+ .b(b),
+ .simu_stream_tdata(color), 
+ .valid(Pixel_valid)
+ );
 
- packer pixel_packer(    .aclk(out_stream_aclk),
-                         .aresetn(periph_resetn),
-                         .r(r), .g(g), .b(b),
-                         .eol(lastx), .in_stream_ready(ready), .valid(Pixel_valid), .sof(first),
-                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
-                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
-                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
+//  packer pixel_packer(    .aclk(out_stream_aclk),
+//                          .aresetn(periph_resetn),
+//                          .r(r), .g(g), .b(b),
+//                          .eol(lastx), .in_stream_ready(ready), .valid(Pixel_valid), .sof(first),
+//                          .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+//                          .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+//                          .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
                        
 endmodule

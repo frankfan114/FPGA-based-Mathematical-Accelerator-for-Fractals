@@ -80,15 +80,21 @@ def compute_and_display_mandelbrot():
 
     try:
         # Start timing
-        start_time = time.perf_counter_ns()
+        #start_time = time.perf_counter_ns()
 
         # Compute Mandelbrot set frame by frame
         for iteration in range(1, MAX_ITER + 1):
+            if iteration == MAX_ITER-19:
+                start_time = time.perf_counter_ns()
+                
             julia_cy.compute_mandelbrot_set(mandelbrot_set, REAL_MIN, REAL_MAX, IMAG_MIN, IMAG_MAX, MAX_ITER, iteration)
             frame_image = generate_image(mandelbrot_set, iteration, MAX_ITER)
             frame_path = os.path.join(FRAME_DIR, f'mandelbrot_frame_{iteration}.png')
             frame_image.save(frame_path)
             frames.append(frame_path)
+            
+            if iteration == MAX_ITER:
+                end_time = time.perf_counter_ns()
         # temp_dir = tempfile.gettempdir()
         # output_path = os.path.join(temp_dir, "mandelbrot_output.json")
 
@@ -102,14 +108,14 @@ def compute_and_display_mandelbrot():
         #     json.dump(output, f)
         
         # End timing
-        end_time = time.perf_counter_ns()
+        #end_time = time.perf_counter_ns()
 
-        # Generate the final image
+        
         mandelbrot_image = generate_image(mandelbrot_set, MAX_ITER, MAX_ITER)
 
-        # Calculate total time, throughput, and latency
+        
         total_time = end_time - start_time
-        pixel_count = WIDTH * HEIGHT * MAX_ITER
+        pixel_count = WIDTH * HEIGHT * 20
         overall_throughput = (pixel_count / total_time) * 1e9
         latency = (total_time / pixel_count) * 1e-9
         

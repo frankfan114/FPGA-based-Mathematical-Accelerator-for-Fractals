@@ -72,6 +72,7 @@ def process_32bit_values(values):
 
             # Extract the 24-bit values
             for shift in (0, 24, 48, 72):
+            # for shift in (72, 48, 24, 0):
                 rgb_value = (combined_96bit >> shift) & 0xFFFFFF
                 processed_values.append(rgb_value)
     

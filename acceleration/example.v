@@ -36,6 +36,8 @@ module pixel_generator(
     input                           s_axi_lite_wvalid
 
 );
+
+
 localparam REG_FILE_SIZE = 8;
 parameter AXI_LITE_ADDR_WIDTH = 8;
 localparam AWAIT_WADD_AND_DATA = 3'b000;
@@ -164,25 +166,18 @@ assign s_axi_lite_bvalid = (writeState == AWAIT_RESP);
 assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 initial begin
-   regfile[0] = 32'h3000266;
-   regfile[1] = 32'h10164;
-   regfile[2] = 32'h1800133;
+   regfile[0] = 0;
 end
 
-wire [7:0] max_iteration = regfile[1][7:0];
-wire [15:0] SCALE_REAL = regfile[0][31:16];
-wire [15:0] SCALE_IMAG = regfile[0][15:0];
-wire [31:0] OFFSET_REAL = regfile[2][31:16];
-wire [31:0] OFFSET_IMAG = regfile[2][15:0];
-
-localparam SCALE_FACTOR = 256;
-// localparam  SCALE_REAL = 768; //3
-// localparam  SCALE_IMAG = 614;//2.4
-// localparam  OFFSET_REAL = 384;//-1.5
-// localparam  OFFSET_IMAG = 307;//-1.2
-// localparam  max_iteration =100;
+localparam max_iteration = 100;
+parameter SCALE_FACTOR = 256;
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
+
+localparam  SCALE_REAL = 768;
+localparam  SCALE_IMAG = 614;
+localparam  OFFSET_REAL = -384;
+localparam  OFFSET_IMAG = -307;
 
 localparam [2:0]
     MSTART = 3'b000,
@@ -190,149 +185,113 @@ localparam [2:0]
     MOUTPUT = 3'b010,
     JSTART = 3'b011,
     JITERATE = 3'b100,
-    JOUTPUT = 3'b101,
-    MWAIT = 3'b110,
-    JWAIT = 3'b111;
+    JOUTPUT = 3'b101;
 
 reg [2:0]  state = MSTART; 
-wire switch = (max_iteration == 8'd80);
+//wire switch = (regfile[0] == 32'b);
+wire switch = 0;
 reg [15:0] x; 
 reg [15:0] y;
 reg [7:0] iter_count;
 
-reg signed [31:0] zr, zi, c_im, c_re;
-reg signed [31:0] zr2, zi2;
-
+reg signed [31:0] zr, zi, zr2, zi2, c_im, c_re;
 wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 
+
 always @(posedge out_stream_aclk) begin
 
     case(state)
-
-        // MWAIT:begin
-        //     if(ready)begin
-        //         if (lastx) begin
-        //             x <= 16'd0;
-        //             if (lasty) begin
-        //                 y <= 16'd0;
-        //             end
-        //             else begin
-        //                 y <= y + 16'd1;
-        //             end
-        //         end
-        //         else begin x <= x + 16'd1;
-        //         end
-                
-        //         iter_count <= 0;
-        //         state <= MSTART;
-        //     end else
-        //         state <= MWAIT;
-        // end
-
-
-        JWAIT:begin
-            if(ready)begin
-                if (lastx) begin
-                    x <= 16'd0;
-                    if (lasty) begin
-                        y <= 16'd0;
-                    end
-                    else begin
-                        y <= y + 16'd1;
-                    end
-                end
-                else begin x <= x + 16'd1;
-                end
-
-                iter_count <= 0;
-                state <= JSTART;
-            end else
-                state <= JWAIT;
-        end
-
-
         JSTART: begin
             if (periph_resetn) begin
-                zr = -OFFSET_REAL + x * SCALE_REAL/ X_SIZE;
-                zi = -OFFSET_IMAG + y * SCALE_IMAG/ Y_SIZE;
+                iter_count <= 0;
+                zr <= OFFSET_REAL + x * SCALE_REAL/ X_SIZE;
+                zi <= OFFSET_IMAG + y * SCALE_IMAG/ Y_SIZE;
                 state <= JITERATE;
             end
             else begin
                 x <= 0;
                 y <= 0;
-                state <= MSTART;
+
+                if(switch) begin
+                   state <= JSTART;
+                end    
+                else begin
+                   state <= MSTART;
                 end
             end
-
+        end
 
         JITERATE: begin
             if (periph_resetn) begin
                 zr2 = (zr * zr) / SCALE_FACTOR;  
                 zi2 = (zi * zi) / SCALE_FACTOR;  
 
-                if (((zr2 + zi2) > (4*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
+                if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
                     iter_count <= iter_count+1;
                     state <= JOUTPUT;                  
                 end
 
                 else begin
-                    zr <= (zr2 - zi2) - 213;
-                    zi <= (2 * zr * zi) / SCALE_FACTOR - 59;
+                    zr <= (zr2 - zi2) -213;
+                    zi <= (2 * zr * zi) / SCALE_FACTOR -59;
                     iter_count <= iter_count + 1;
                     state <= JITERATE;
                 end
             end
-
             else begin
                 x <= 0;
                 y <= 0;
-                state <= MSTART;
+
+                if(switch) begin
+                   state <= JSTART;
+                end    
+                else begin
+                   state <= MSTART;
+                end
             end
         end
 
-
         JOUTPUT: begin
         if (periph_resetn) begin
-            if(ready)begin
-                iter_count <= 0;
+            iter_count <= 0;
+            zr <= 0;
+            zi <= 0;
+            if (lastx) begin
+                x <= 16'd0;
+                if (lasty) begin
+                    y <= 16'd0;
+                end
+                else begin
+                    y <= y + 16'd1;
+                end
+            end
+            else x <= x + 16'd1;
+            if(out_stream_tready)begin
+                state <= JSTART; // Move to start to process the next pixel if 
+            end
+        end
+            else begin
+                x <= 0;
+                y <= 0;
 
-                if (lastx) begin
-                    x <= 16'd0;
-                    if (lasty) begin
-                        y <= 16'd0;
-                    end
-                    else begin
-                        y <= y + 16'd1;
-                    end
-                end
-                else begin x <= x + 16'd1;
-                end
-                
                 if(switch) begin
-                    state <= JSTART; 
-                 end
-                else begin 
-                    state <= MSTART;
+                   state <= JSTART;
+                end    
+                else begin
+                   state <= MSTART;
                 end
-            end 
-            else state <= JWAIT;
-        end
-        else begin
-            x <= 0;
-            y <= 0;
-            state <= MSTART;
-        end
+            end
         end
 
-
+    
     // mandelbrot 
         MSTART: begin
             if (periph_resetn) begin
                 iter_count <= 0;
-                c_re = -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
-                c_im = -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
+                c_re = OFFSET_REAL + x * SCALE_REAL / X_SIZE;
+                c_im = OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
                 zr <= 0; 
                 zi <= 0; 
                 state <= MITERATE;
@@ -341,10 +300,15 @@ always @(posedge out_stream_aclk) begin
             else begin
                 x <= 0;
                 y <= 0;
-                state <= MSTART;
+                
+                if(switch)begin
+                    state <= JSTART;
+                end
+                else begin
+                    state <= MSTART;
+                end
             end
         end
-
 
         MITERATE: begin
             if (periph_resetn) begin
@@ -354,7 +318,7 @@ always @(posedge out_stream_aclk) begin
                 if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
                     iter_count <= iter_count+1;
                     state <= MOUTPUT;
-
+                    
                 end 
                 else begin
                     zr <= (zr2 - zi2) + c_re;
@@ -366,10 +330,15 @@ always @(posedge out_stream_aclk) begin
              else begin
                 x <= 0;
                 y <= 0;
-                state <= MSTART;
+                
+                if(switch)begin
+                    state <= JSTART;
+                end
+                else begin
+                    state <= MSTART;
+                end
             end
         end
-
 
         MOUTPUT: begin
         if (periph_resetn) begin
@@ -384,20 +353,22 @@ always @(posedge out_stream_aclk) begin
                     end
                 end
                 else x <= x + 16'd1;
-
+                state <= MSTART; // Move to start to process the next pixel if 
+            end
+            else begin
+                state <= MOUTPUT;
+            end
+        end
+            else begin
+                x <= 0;
+                y <= 0;
+                
                 if(switch)begin
                     state <= JSTART;
                 end
                 else begin
                     state <= MSTART;
                 end
-            end
-            else state <= MOUTPUT;
-        end
-        else begin
-            x <= 0;
-            y <= 0;
-            state <= MSTART;
             end
         end
 
@@ -407,27 +378,23 @@ always @(posedge out_stream_aclk) begin
     endcase
 end
 
-wire Mvalid = ((state == MOUTPUT) || (state == MWAIT));
-wire Jvalid = ((state == JOUTPUT) || (state == JWAIT));
+wire Mvalid = (state == MOUTPUT);
+wire Jvalid = (state == JOUTPUT);
+
 reg [23:0] data; 
 
 always @(*) begin
     if (iter_count == max_iteration) begin
-        data [23:16] = 0;
-        data [15:8] = 0;
-        data [7:0] = 0;
-
+        data[23:16] = 0;
+        data[15:8]  = 0;
+        data[7:0]  = 0; 
     end
     else begin
-        // if(state == MOUTPUT || state == JOUTPUT) begin
-            // Red component based on iteration count
         data[23:16] = iter_count;  // Red component based on iteration count
-        data[15:8] = (iter_count * regfile[1][15:8]);  // Green component
-        data[7:0] = (iter_count * regfile[1][23:16]);  // Blue component
-
-        // end
-        
+        data[15:8] = iter_count;  // Green component
+        data[7:0] = iter_count;  // Blue component
     end
+
 end
 
 wire [7:0] r, g, b;
@@ -436,13 +403,23 @@ assign g = data[15:8];
 assign b = data[7:0];
 
 
- packer pixel_packer(    .aclk(out_stream_aclk),
-                         .aresetn(periph_resetn),
-                         .r(r), .g(g), .b(b),
-                         .eol(lastx), .in_stream_ready(ready), .valid(Jvalid || Mvalid), .sof(first),
-                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
-                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
-                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
+// simulator pixel_simulator(
+// .aclk(aclk),
+// .aresetn(aresetn),
+// .r(r),
+// .g(g),
+// .b(b),
+// .simu_stream_tdata(color), 
+// .valid(Mvalid)
+// );
+
+    packer pixel_packer(    .aclk(out_stream_aclk),
+                        .aresetn(periph_resetn),
+                        .r(r), .g(g), .b(b),
+                        .eol(lastx), .in_stream_ready(ready), .valid(Mvalid), .sof(first),
+                        .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+                        .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+                        .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
                        
 endmodule

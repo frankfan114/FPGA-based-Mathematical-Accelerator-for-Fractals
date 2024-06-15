@@ -1,5 +1,5 @@
 #!/bin/bash
-DUT="simulator.v pixel_generator.v" #把mandelbrot.v改名
+DUT="simulator.v example.v" #把mandelbrot.v改名
 TEST_BENCH="streamer_tb.v"
 OBJ="stream"
 WAVE="test.vcd"

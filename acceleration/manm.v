@@ -178,9 +178,9 @@ wire [31:0] OFFSET_IMAG = regfile[2][15:0];
 localparam SCALE_FACTOR = 256;
 // localparam  SCALE_REAL = 768; //3
 // localparam  SCALE_IMAG = 614;//2.4
-// localparam  OFFSET_REAL = 384;//-1.5
-// localparam  OFFSET_IMAG = 307;//-1.2
-// localparam  max_iteration =100;
+// localparam  OFFSET_REAL = -384;//-1.5
+// localparam  OFFSET_IMAG = -307;//-1.2
+
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
 
@@ -200,9 +200,7 @@ reg [15:0] x;
 reg [15:0] y;
 reg [7:0] iter_count;
 
-reg signed [31:0] zr, zi, c_im, c_re;
-reg signed [31:0] zr2, zi2;
-
+reg signed [31:0] zr, zi, c_im, c_re, zr2, zi2;
 wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
@@ -211,41 +209,17 @@ always @(posedge out_stream_aclk) begin
 
     case(state)
 
-        // MWAIT:begin
-        //     if(ready)begin
-        //         if (lastx) begin
-        //             x <= 16'd0;
-        //             if (lasty) begin
-        //                 y <= 16'd0;
-        //             end
-        //             else begin
-        //                 y <= y + 16'd1;
-        //             end
-        //         end
-        //         else begin x <= x + 16'd1;
-        //         end
-                
-        //         iter_count <= 0;
-        //         state <= MSTART;
-        //     end else
-        //         state <= MWAIT;
-        // end
+        MWAIT:begin
+            if(out_stream_tready)begin
+                iter_count <= 0;
+                state <= MSTART;
+            end else
+                state <= MWAIT;
+        end
 
 
         JWAIT:begin
-            if(ready)begin
-                if (lastx) begin
-                    x <= 16'd0;
-                    if (lasty) begin
-                        y <= 16'd0;
-                    end
-                    else begin
-                        y <= y + 16'd1;
-                    end
-                end
-                else begin x <= x + 16'd1;
-                end
-
+            if(out_stream_tready)begin
                 iter_count <= 0;
                 state <= JSTART;
             end else
@@ -272,7 +246,7 @@ always @(posedge out_stream_aclk) begin
                 zr2 = (zr * zr) / SCALE_FACTOR;  
                 zi2 = (zi * zi) / SCALE_FACTOR;  
 
-                if (((zr2 + zi2) > (4*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
+                if (((zr2 + zi2) > (4*SCALE_FACTOR*SCALE_FACTOR))   || iter_count == max_iteration-1) begin
                     iter_count <= iter_count+1;
                     state <= JOUTPUT;                  
                 end
@@ -295,21 +269,20 @@ always @(posedge out_stream_aclk) begin
 
         JOUTPUT: begin
         if (periph_resetn) begin
-            if(ready)begin
+            
+            if (lastx) begin
+                x <= 16'd0;
+                if (lasty) begin
+                    y <= 16'd0;
+                end
+                else begin
+                    y <= y + 16'd1;
+                end
+            end
+            else begin x <= x + 16'd1;
+            end
+            if(out_stream_tready)begin
                 iter_count <= 0;
-
-                if (lastx) begin
-                    x <= 16'd0;
-                    if (lasty) begin
-                        y <= 16'd0;
-                    end
-                    else begin
-                        y <= y + 16'd1;
-                    end
-                end
-                else begin x <= x + 16'd1;
-                end
-                
                 if(switch) begin
                     state <= JSTART; 
                  end
@@ -409,22 +382,18 @@ end
 
 wire Mvalid = ((state == MOUTPUT) || (state == MWAIT));
 wire Jvalid = ((state == JOUTPUT) || (state == JWAIT));
+wire yuchin = (out_stream_tready && ( Mvalid || Jvalid));
 reg [23:0] data; 
 
 always @(*) begin
     if (iter_count == max_iteration) begin
-        data [23:16] = 0;
-        data [15:8] = 0;
-        data [7:0] = 0;
-
+        data = 0;
     end
     else begin
         // if(state == MOUTPUT || state == JOUTPUT) begin
-            // Red component based on iteration count
-        data[23:16] = iter_count;  // Red component based on iteration count
-        data[15:8] = (iter_count * regfile[1][15:8]);  // Green component
-        data[7:0] = (iter_count * regfile[1][23:16]);  // Blue component
-
+            data[23:16] = iter_count;  // Red component based on iteration count
+            data[15:8] = (iter_count * regfile[1][15:8]);  // Green component
+            data[7:0] = (iter_count * regfile[1][23:16]);  // Blue component
         // end
         
     end
@@ -435,6 +404,15 @@ assign r = data[23:16];
 assign g = data[15:8];
 assign b = data[7:0];
 
+// simulator pixel_simulator(
+// .aclk(aclk),
+// .aresetn(aresetn),
+// .r(r),
+// .g(g),
+// .b(b),
+// .simu_stream_tdata(color), 
+// .valid(Jvalid || Mvalid)
+// );
 
  packer pixel_packer(    .aclk(out_stream_aclk),
                          .aresetn(periph_resetn),

@@ -1,5 +1,5 @@
 #!/bin/bash
-DUT="packer.v combined.v" #把mandelbrot.v改名
+DUT="packer.v final.v" #把mandelbrot.v改名
 TEST_BENCH="streamer_tb.v"
 OBJ="stream"
 WAVE="test.vcd"

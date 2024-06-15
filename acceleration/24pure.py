@@ -1,5 +1,14 @@
 from PIL import Image
 
+# clean log.txt and output.txt
+
+# with open('log.txt', 'w') as log:
+#     log.write("")
+# with open('output.txt', 'w') as f:
+#     f.write("")
+# with open('imagelog.txt', 'w') as imagelog:
+#     imagelog.write("")
+
 
 def generate_image(values):
     # Create a new image with size 640x480
@@ -19,9 +28,18 @@ def generate_image(values):
         x = i % 640
         y = i // 640
         
+        # with open('imagelog.txt', 'a') as imagelog:
+        #     #write pixel_value as binary value 
+        #     imagelog.write(f"Pixel at ({x}, {y}): 24-bit value: {pixel_value:024b}\n")
+        #     #write in binary rgb
+        #     imagelog.write(f"Red: {red:08b}, Green: {green:08b}, Blue: {blue:08b}\n")
+
         # Set the pixel value in the image
         img.putpixel((x, y), (red, green, blue))
 
+        #save to a txt file "log"
+        # with open('log.txt', 'a') as log:
+        #     log.write(f"Pixel at ({x}, {y}): 24-bit value: {pixel_value}\n")
 
 
     # Save the image as a PNG file
@@ -74,7 +92,7 @@ def write_values_to_file(values, output_filename):
 
 # usage:
 filename = 'test.vcd'
-pixels = read_vcd_signal(filename,'out_stream_tdata','x')
+pixels = read_vcd_signal(filename,'simu_stream_tdata','x')
 
 # write_values_to_file(pixels, 'output.txt')
 
@@ -82,4 +100,3 @@ pixels = read_vcd_signal(filename,'out_stream_tdata','x')
 generate_image(pixels[:640*480])
 
 print("Image has been generated and saved as 'output_image.png'")
-

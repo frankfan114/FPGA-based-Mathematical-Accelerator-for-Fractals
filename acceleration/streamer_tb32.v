@@ -6,15 +6,13 @@ module pixgen_tb;
     localparam RANDOM_READY = 2;        //Ready signal is true 50% of the time according to pseudo-random sequence
     localparam READY_AFTER_VALID = 3;   //Ready signal goes true after valid is true, then goes false
     
-    parameter READY_MODE = 1;
+    parameter READY_MODE = RANDOM_READY;
 
 
     parameter TIMEOUT = 1000;           //Time to wait for valid to be true
-    // parameter X_SIZE = 480;             //X dimension of image in words (words = pixels * 3/4)
-    parameter X_SIZE = 640;             //X dimension of image in words (words = pixels * 3/4)
-
+    parameter X_SIZE = 480;             //X dimension of image in words (words = pixels * 3/4)
     parameter Y_SIZE = 480;             //Y dimension of image
-    parameter ENDTIME = 30000000;       //End time of simulation
+    parameter ENDTIME = 10000000;       //End time of simulation
     parameter RND_SEED = 1246504138;    //Random seed for ready signal generation
     
     //Simulation configuration
@@ -114,7 +112,7 @@ module pixgen_tb;
         //Check for timeout waiting for valid
         if (valid) checkpoint = $time;
         if ($time > checkpoint + TIMEOUT) begin
-            // $display("Error: Timeout waiting for valid");
+            $display("Error: Timeout waiting for valid");
             checkpoint = $time;
         end
 
@@ -132,7 +130,7 @@ module pixgen_tb;
                 end
             end
             else if (sof) begin
-                // $display("Error: Unexpected SOF received on word %0d of line %0d of frame %0d", xCount, yCount, frameCount);
+                $display("Error: Unexpected SOF received on word %0d of line %0d of frame %0d", xCount, yCount, frameCount);
                 xCount = 0;
                 yCount = 0;
                 frameCount = frameCount + 1;

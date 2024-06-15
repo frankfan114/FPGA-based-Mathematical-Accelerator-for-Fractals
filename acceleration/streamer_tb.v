@@ -14,7 +14,7 @@ module pixgen_tb;
     // parameter X_SIZE = 640;             //X dimension of image in words (words = pixels * 3/4)
 
     parameter Y_SIZE = 480;             //Y dimension of image
-    parameter ENDTIME = 10000000;       //End time of simulation
+    parameter ENDTIME = 100000000;       //End time of simulation
     parameter RND_SEED = 1246504138;    //Random seed for ready signal generation
     
     //Simulation configuration
@@ -26,7 +26,7 @@ module pixgen_tb;
 
     //Generate the clock input
     reg clk = 0;
-    always #5 clk = !clk;
+    always #3.5 clk = !clk;
 
     //Generate the reset input
     reg rst = 0;
@@ -141,7 +141,7 @@ module pixgen_tb;
             //Check for End of Line (tlast in AXI Stream) on last word of each line
             if (xCount == X_SIZE - 1) begin
                 if (eol) begin
-                    $display("EOL Ok on line %0d", yCount);
+                    // $display("EOL Ok on line %0d", yCount);
                     xCount = 0;
                     yCount = yCount + 1;
                 end

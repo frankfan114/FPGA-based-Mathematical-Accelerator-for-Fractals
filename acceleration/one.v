@@ -220,7 +220,7 @@ localparam limit= 4*SCALE_FACTOR*SCALE_FACTOR;
 
 wire first = (x == 0) & (y == 0);
 
-wire lastx = (x == X_SIZE - 2);
+wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 
 wire lastx1 = (x1 == X_SIZE - 1);
@@ -230,7 +230,7 @@ wire lasty1 = (y1 == Y_SIZE - 1);
 wire stop =  (pixel_pass == PASS);
 
 reg a_valid = 0;
-wire enter = ( ( state == OUTPUT ) && (state1 == OUTPUT) );
+wire enter = ( ( state == OUTPUT ));
 wire valid = enter || a_valid;
 
 
@@ -315,7 +315,7 @@ always @(posedge out_stream_aclk) begin
             end
 
             OUTPUT: begin
-                if (out_stream_tready && valid) begin
+                if (out_stream_tready && (a_valid || enter)) begin
                     
                     if (lastx) begin
                         x <= 9'd0;
@@ -326,7 +326,7 @@ always @(posedge out_stream_aclk) begin
                         end
                     end 
                     else begin
-                        x <= x + 9'd2;                  
+                        x <= x + 9'd1;                  
                     end
 
                     if (switch) begin
@@ -432,7 +432,7 @@ always @(posedge out_stream_aclk) begin
         
     
         OUTPUT: begin
-            if (ready && (pixel_pass == PASS) ) begin
+            if (out_stream_tready && (pixel_pass == PASS) ) begin
                 
                 if (lastx1) begin
                     x1 <= 9'd1;
@@ -500,16 +500,16 @@ always @(posedge out_stream_aclk) begin // buffer, gen_stop, ready
             if (enter) begin
                 a_valid <=1;
             end
-            if (ready && (a_valid||enter)) begin
+            if (out_stream_tready && (a_valid||enter)) begin
                 pixel_pass <= PASS;
             end
             else begin
-                pixel_pass <= GEN;
+                pixel_pass <= PASS;
             end
         end
 
         PASS: begin
-            if(ready) begin
+            if(out_stream_tready) begin
                 a_valid<=0;
                 pixel_pass<=GEN;
             end
@@ -529,9 +529,9 @@ end
 wire [7:0] r, g, b;
 
 // Simplified logic to assign r, g, b
-assign r = (pixel_pass == GEN) ? data[23:16] : data1[23:16];
-assign g = (pixel_pass == GEN) ? data[15:8]  : data1[15:8];
-assign b = (pixel_pass == GEN) ? data[7:0]   : data1[7:0];
+assign r = (pixel_pass == GEN) ? data[23:16] : data[23:16];
+assign g = (pixel_pass == GEN) ? data[15:8]  : data[15:8];
+assign b = (pixel_pass == GEN) ? data[7:0]   : data[7:0];
 
 
 // wire [23:0] color;
@@ -548,7 +548,7 @@ assign b = (pixel_pass == GEN) ? data[7:0]   : data1[7:0];
  packer pixel_packer(    .aclk(out_stream_aclk),
                          .aresetn(periph_resetn),
                          .r(r), .g(g), .b(b),
-                         .eol(lastx1 && lastx ), .in_stream_ready(ready), .valid(valid) , .sof(first),
+                         .eol(lastx ), .in_stream_ready(ready), .valid(valid) , .sof(first),
                          .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                          .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                          .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );

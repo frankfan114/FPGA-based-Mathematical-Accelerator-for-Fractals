@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-module pixgen_tb;
+module streamer_tb;
 
     //Ready signal mode
     localparam ALWAYS_READY = 1;        //Ready signal is always true
@@ -10,17 +10,15 @@ module pixgen_tb;
 
 
     parameter TIMEOUT = 1000;           //Time to wait for valid to be true
-    parameter X_SIZE = 480;             //X dimension of image in words (words = pixels * 3/4)
-    // parameter X_SIZE = 640;             //X dimension of image in words (words = pixels * 3/4)
-
-    parameter Y_SIZE = 480;             //Y dimension of image
-    parameter ENDTIME = 100000000;       //End time of simulation
+    parameter X_SIZE = 1440;             //X dimension of image in words (words = pixels * 3/4)
+    parameter Y_SIZE = 1080;             //Y dimension of image
+    parameter ENDTIME = 300000000;       //End time of simulation
     parameter RND_SEED = 1246504138;    //Random seed for ready signal generation
     
     //Simulation configuration
     initial begin
-        $dumpfile("test.vcd");
-        $dumpvars(0,pixgen_tb);
+        $dumpfile("testa.vcd");
+        $dumpvars(0,streamer_tb);
         #ENDTIME $finish;
     end
 
@@ -128,7 +126,7 @@ module pixgen_tb;
                     frameCount = frameCount + 1;
                 end
                 else begin
-                    $display("Error: Expected SOF but not received"); 
+                    // $display("Error: Expected SOF but not received"); 
                 end
             end
             else if (sof) begin
@@ -141,17 +139,16 @@ module pixgen_tb;
             //Check for End of Line (tlast in AXI Stream) on last word of each line
             if (xCount == X_SIZE - 1) begin
                 if (eol) begin
-                    // $display("EOL Ok on line %0d", yCount);
                     xCount = 0;
                     yCount = yCount + 1;
                 end
                 else begin
-                    $display("Error: No EOL on word %0d of line %0d", X_SIZE - 1, yCount);
+                    // $display("Error: No EOL on word %0d of line %0d", X_SIZE - 1, yCount);
                     xCount = xCount + 1; 
                 end
             end
             else if (eol) begin
-                $display("Error: Unexpected EOL received on word %0d of line %0d", xCount, yCount);
+                // $display("Error: Unexpected EOL received on word %0d of line %0d", xCount, yCount);
                 xCount = 0;
                 yCount = yCount + 1;
             end

@@ -163,25 +163,23 @@ assign s_axi_lite_bvalid = (writeState == AWAIT_RESP);
 assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 
-//
-
-
 initial begin
-   regfile[0] = 32'hD5003B;
-   regfile[1] = 32'h10150;
-//    regfile[1] = 32'h10164;
-   regfile[2] = 32'h1800133;
+   regfile[0] = 32'b1110110011010101;
+   regfile[1] = 32'h01010164;
+   regfile[2] = 32'h26600E6;
+   regfile[3] = 32'h33301CD;
 end
 
-wire [7:0] max_iteration = regfile[1][7:0];
-wire [15:0] SCALE_REAL = 2*regfile[2][31:16];
-wire [15:0] SCALE_IMAG = 2*regfile[2][15:0];
-wire [31:0] OFFSET_REAL = regfile[2][31:16];
-wire [31:0] OFFSET_IMAG = regfile[2][15:0];
 
-localparam SCALE_FACTOR = 256;
-localparam X_SIZE = 640;
-localparam Y_SIZE = 480;
+localparam  SCALE_FACTOR = 256;
+wire [7:0] max_iteration = regfile[1][7:0];
+wire [11:0] OFFSET_REAL = regfile[2][31:16];//min10bit
+wire [11:0] OFFSET_IMAG = regfile[2][15:0];
+wire [12:0] SCALE_REAL = regfile[3][31:16];//min11bit
+wire [12:0] SCALE_IMAG = regfile[3][15:0];
+
+localparam X_SIZE = 1920;
+localparam Y_SIZE = 1080;
 
 localparam [2:0]
     MSTART = 3'b000,
@@ -203,8 +201,8 @@ reg [1:0]            pixel_pass = GEN;
 
 wire switch = (max_iteration == 8'd80);
 
-reg [9:0] x,x1; 
-reg [8:0] y,y1;
+reg [10:0] x,x1; 
+reg [10:0] y,y1;
 
 reg [7:0] iter_count,iter_count1;
 reg [7:0] iter_final,iter_final1;
@@ -220,17 +218,17 @@ localparam limit= 4*SCALE_FACTOR*SCALE_FACTOR;
 
 wire first = (x == 0) & (y == 0);
 
-wire lastx = (x == X_SIZE - 2);
+wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 
 wire lastx1 = (x1 == X_SIZE - 1);
 wire lasty1 = (y1 == Y_SIZE - 1);
 
 
+reg a_valid = 0;
+wire enter = ( ( state == OUTPUT ));
 wire stop =  (pixel_pass == PASS);
 
-reg a_valid = 0;
-wire enter = ( ( state == OUTPUT ) && (state1 == OUTPUT) );
 wire valid = enter || a_valid;
 
 
@@ -256,8 +254,8 @@ always @(posedge out_stream_aclk) begin
                 zr = -OFFSET_REAL + x * SCALE_REAL / X_SIZE;
                 zi = -OFFSET_IMAG + y * SCALE_IMAG / Y_SIZE;
                 state = JCHECK;
-                c_re = regfile[0][31:16];
-                c_im = regfile[0][15:0];
+                c_re <= regfile[0][18:10];
+                c_im <= regfile[0][9:0];
             end
 
             JCHECK: begin
@@ -315,18 +313,18 @@ always @(posedge out_stream_aclk) begin
             end
 
             OUTPUT: begin
-                if (out_stream_tready && valid) begin
+                if (out_stream_tready && (a_valid || enter)) begin
                     
                     if (lastx) begin
-                        x <= 9'd0;
+                        x <= 11'd0;
                         if (lasty) begin
-                            y <= 8'd0;
+                            y <= 11'd0;
                         end else begin
-                            y <= y + 8'd1;
+                            y <= y + 11'd1;
                         end
                     end 
                     else begin
-                        x <= x + 9'd2;                  
+                        x <= x + 11'd1;                  
                     end
 
                     if (switch) begin
@@ -372,8 +370,8 @@ always @(posedge out_stream_aclk) begin
             zr1 = -OFFSET_REAL + x1 * SCALE_REAL / X_SIZE;
             zi1 = -OFFSET_IMAG + y1 * SCALE_IMAG / Y_SIZE;
             state1 = JCHECK;
-            c_re1 = regfile[0][31:16];
-            c_im1 = regfile[0][15:0];
+            c_re1 <= regfile[0][18:10];
+            c_im1 <= regfile[0][9:0];
         end
 
         JCHECK: begin
@@ -432,18 +430,18 @@ always @(posedge out_stream_aclk) begin
         
     
         OUTPUT: begin
-            if (ready && (pixel_pass == PASS) ) begin
+            if ((pixel_pass == PASS) && out_stream_tready) begin
                 
                 if (lastx1) begin
-                    x1 <= 9'd1;
+                    x1 <= 11'd1;
                     if (lasty1) begin
-                        y1 <= 8'd0;
+                        y1 <= 11'd0;
                     end else begin
-                        y1 <= y1 + 8'd1;
+                        y1 <= y1 + 11'd1;
                     end
                 end 
                 else begin
-                    x1 <= x1 + 9'd2;       
+                    x1 <= x1 + 11'd2;       
                                 
                 end
 
@@ -472,23 +470,23 @@ reg [23:0] data, data1;
 
 always @(*) begin
     if (iter_count == max_iteration-1) begin
-        data =24'b0;
+        data = {regfile[0][26:19],regfile[0][26:19],regfile[0][26:19]};
     end
     else begin
-        data[23:16] = iter_final;  // Red component based on iteration count
-        data[15:8] = (iter_final * regfile[1][15:8]);  // Green component
-        data[7:0] = (iter_final *regfile[1][23:16]);  // Blue component        
+        data[23:16] = (iter_final*regfile[1][31:24]);  // Red component based on iteration count
+        data[15:8] = (iter_final * regfile[1][23:16]);  // Green component
+        data[7:0] = (iter_final *regfile[1][15:8]);  // Blue component        
     end
 end
 
 always @(*) begin
     if (iter_count1 == max_iteration-1) begin
-        data1 =24'b0;
+        data1 = {regfile[0][26:19],regfile[0][26:19],regfile[0][26:19]};
     end
     else begin
-        data1[23:16] = iter_final1;  // Red component based on iteration count
-        data1[15:8] = (iter_final1 * regfile[1][15:8]);  // Green component
-        data1[7:0] = (iter_final1 *regfile[1][23:16]);  // Blue component    
+        data1[23:16] = (iter_final1*regfile[1][31:24]);  // Red component based on iteration count
+        data1[15:8] = (iter_final1 * regfile[1][23:16]);  // Green component
+        data1[7:0] = (iter_final1 *regfile[1][15:8]);  // Blue component        
     end
 end
 
@@ -500,7 +498,7 @@ always @(posedge out_stream_aclk) begin // buffer, gen_stop, ready
             if (enter) begin
                 a_valid <=1;
             end
-            if (ready && (a_valid||enter)) begin
+            if (out_stream_tready && (a_valid||enter)) begin
                 pixel_pass <= PASS;
             end
             else begin
@@ -509,7 +507,7 @@ always @(posedge out_stream_aclk) begin // buffer, gen_stop, ready
         end
 
         PASS: begin
-            if(ready) begin
+            if(out_stream_tready) begin
                 a_valid<=0;
                 pixel_pass<=GEN;
             end
@@ -529,9 +527,9 @@ end
 wire [7:0] r, g, b;
 
 // Simplified logic to assign r, g, b
-assign r = (pixel_pass == GEN) ? data[23:16] : data1[23:16];
-assign g = (pixel_pass == GEN) ? data[15:8]  : data1[15:8];
-assign b = (pixel_pass == GEN) ? data[7:0]   : data1[7:0];
+assign r = (pixel_pass == GEN) ? data[23:16] : data[23:16];
+assign g = (pixel_pass == GEN) ? data[15:8]  : data[15:8];
+assign b = (pixel_pass == GEN) ? data[7:0]   : data[7:0];
 
 
 // wire [23:0] color;

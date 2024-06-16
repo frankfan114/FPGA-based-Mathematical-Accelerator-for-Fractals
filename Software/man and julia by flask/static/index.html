@@ -115,10 +115,10 @@
         createApp({
             data() {
                 return {
-                    c_maxre: 1,
-                    c_minre: -1,
-                    c_maxim: 1,
-                    c_minim: -1,
+                    c_maxre: 1.5,
+                    c_minre: -1.5,
+                    c_maxim: 1.2,
+                    c_minim: -1.2,
                     max_iter: 100,
                     hi: 480,
                     wi: 640,
@@ -168,7 +168,9 @@
                 }
 
                 function fetchMandelbrotResults() {
-                    fetch(`http://${window.location.hostname}:5000/mandelbrot`)
+                    fetch(`http://${window.location.hostname}:5000/mandelbrot`, {
+                        method: 'GET'
+                    })
                         .then(response => response.json())
                         .then(response => {
                             let base64Image = response.image;
@@ -251,11 +253,10 @@
                         min_imaginary: this.c_minim,
                         max_iterations: this.max_iter,
                         height: this.hi,
-                        width: this.wi,
-                        coordinate: this.coordinate,
-                        zoom_factor: this.zoom_factor
+                        width: this.wi
+                        
                     };
-                    fetch(`http://${window.location.hostname}:5000/gui`, {
+                    fetch(`http://${window.location.hostname}:5000/mandelbrot`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -302,7 +303,8 @@
                     <input type="number" id="Height" v-model.number="hi">
                 </div>
                 <button type="submit">Submit</button>
-                <button type="button" @click="fetchJuliaResults">Video</button>
+                <button @click="goToPage('videos.html')">Video</button>
+                <button @click="goToPage('http://146.169.142.254:5001/guibackup')">hardware</button>
             </form>
         </div>
 

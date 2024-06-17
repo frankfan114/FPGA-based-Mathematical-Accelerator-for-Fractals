@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify, send_file, render_template, url_for
 from io import BytesIO
 import numpy as np
 from PIL import Image
-import julia_cy  # 假设这个模块已经正确编译并可以导入
+import julia_cy  
 from flask_cors import CORS
 import time
 import re

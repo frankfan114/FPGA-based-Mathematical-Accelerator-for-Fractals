@@ -19,8 +19,8 @@ CORS(app)
 WIDTH, HEIGHT = 640, 480
 
 # Mandelbrot set range
-REAL_MIN, REAL_MAX = -1.5, 1.5
-IMAG_MIN, IMAG_MAX = -1.2, 1.2
+REAL_MIN, REAL_MAX = -2.0, 1.0
+IMAG_MIN, IMAG_MAX = -1.5, 1.5
 
 # Maximum iterations
 MAX_ITER = 100
@@ -197,7 +197,7 @@ def compute_and_display_julia():
         # Calculate total time, throughput, and latency in seconds
         total_time = (end_time - start_time)
 
-        pixel_count = WIDTH * HEIGHT * MAX_ITER
+        pixel_count = WIDTH * HEIGHT *MAX_ITER
         overall_throughput = (pixel_count / total_time) * 1e9
         latency = (total_time / pixel_count) * 1e-9
 

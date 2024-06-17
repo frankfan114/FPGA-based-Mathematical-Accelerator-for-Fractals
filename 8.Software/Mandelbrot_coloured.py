@@ -9,9 +9,9 @@ def mandelbrot(c, max_iter):
     while abs(z) <= 2 and n < max_iter:
         z = z * z + c
         n += 1
-    if n == max_iter:  # 如果达到最大迭代次数
+    if n == max_iter:  
         return max_iter
-    return n + 1 - np.log(np.log2(abs(z)))  # 如果未达到最大迭代次数，则返回该值
+    return n + 1 - np.log(np.log2(abs(z))) 
 
 
 def mandelbrot_set(width, height, x_min, x_max, y_min, y_max, max_iter):
@@ -46,7 +46,6 @@ if __name__ == "__main__":
 
     end_time = time.time()
 
-    # 计算总时间、吞吐量和延迟
     total_time = end_time - start_time
     pixel_count = width * height
     overall_throughput = pixel_count / total_time

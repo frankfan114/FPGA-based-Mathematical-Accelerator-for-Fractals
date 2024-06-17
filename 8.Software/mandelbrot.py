@@ -3,17 +3,14 @@ from PIL import Image
 import time
 import math
 
-# 图像尺寸
 WIDTH, HEIGHT = 800, 800
 
-# 曼德布罗集合的范围
 REAL_MIN, REAL_MAX = -2.0, 1.0
 IMAG_MIN, IMAG_MAX = -1.5, 1.5
 
-# 最大迭代次数
+
 MAX_ITER = 1000
 
-# 计算曼德布罗集合迭代函数
 def mandelbrot(c, max_iter):
     z = 0
     for n in range(max_iter):
@@ -22,7 +19,6 @@ def mandelbrot(c, max_iter):
         z = z*z + c
     return max_iter
 
-# 颜色映射函数，将迭代次数转换为颜色
 def map_color(iter, max_iter):
     if iter == max_iter:
         return (0, 0, 0)  # 内部为黑色
@@ -33,7 +29,6 @@ def map_color(iter, max_iter):
         b = int(8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255)
         return (r, g, b)
 
-# 生成曼德布罗集合图像
 def generate_mandelbrot_image(filename):
     image = Image.new("RGB", (WIDTH, HEIGHT))
     pixels = image.load()
@@ -51,7 +46,6 @@ def generate_mandelbrot_image(filename):
 
     end_time = time.time()
 
-    # 计算总时间、吞吐量和延迟
     total_time = end_time - start_time
     pixel_count = WIDTH * HEIGHT
     overall_throughput = pixel_count / total_time
@@ -64,7 +58,6 @@ def generate_mandelbrot_image(filename):
     image.save(filename)
     image.show()
     return total_time, overall_throughput, latency
-# 生成并保存图像
 A = generate_mandelbrot_image("mandelbrot.png")
 total_time = A[0]
 overall_throughput = A[1]

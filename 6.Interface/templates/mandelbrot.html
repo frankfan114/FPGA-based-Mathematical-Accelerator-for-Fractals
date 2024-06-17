@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Parameters and Formula Example</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        #app {
+            text-align: center;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .input-section, .output-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .input-section label, .output-section p {
+            width: 200px;
+            margin: 5px;
+        }
+
+        input[type="number"] {
+            width: 200px;
+            padding: 8px;
+            margin: 5px;
+        }
+    </style>
+
+    <script src="/static/vue.esm-browser.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <button @click="goToPage('newMandelbrot.html')">New Output</button>
+        
+        <h1>Mandelbrot Set</h1>
+        <h2>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</h2>
+
+        <div class="input-section">
+            <form id="mandelbrotForm" @submit.prevent="submitData">
+                <!-- Real part input -->
+                <label for="maxreal">Max Real Part:</label>
+                <input type="number" id="maxreal" step="any" v-model.number="c_maxre">
+                <label for="minreal">Min Real Part:</label>
+                <input type="number" id="minreal" step="any" v-model.number="c_minre">
+
+                <!-- Imaginary part input -->
+                <label for="maximaginary">Max Imaginary Part:</label>
+                <input type="number" id="maximaginary" step="any" v-model.number="c_maxim">
+                <label for="minimaginary">Min Imaginary Part:</label>
+                <input type="number" id="minimaginary" step="any" v-model.number="c_minim">
+
+                <!-- Maximum iterations input -->
+                <label for="iterations">Max Iterations:</label>
+                <input type="number" id="iterations" v-model.number="max_iter">
+
+                <label for="Height">Height:</label>
+                <input type="number" id="Height" v-model.number="hi">
+
+                <label for="Width">Width:</label>
+                <input type="number" id="Width" v-model.number="wi">
+
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+
+        <div class="output-section">
+            <p>max_real: {{ c_maxre }}</p>
+            <p>min_real: {{ c_minre }}</p>
+            <p>max_imaginary: {{ c_maxim }}</p>
+            <p>min_imaginary: {{ c_minim }}</p>
+            <p>max_iterations: {{ max_iter }}</p>
+            <p>height: {{ hi }}</p>
+            <p>width: {{ wi }}</p>
+        </div>
+        <div class="output-section">
+            <img id="mandelbrotImage" :src="mandelbrotImagePath" alt="Mandelbrot Image" />
+        </div>
+    </div>
+
+    <script type="module">
+        import { createApp } from '/static/vue.esm-browser.js';
+
+        createApp({
+            data() {
+                return {
+                    c_maxre: 0,
+                    c_minre: 0,
+                    c_maxim: 0,
+                    c_minim: 0,
+                    max_iter: 1000,
+                    hi: 800,
+                    wi: 800,
+                    mandelbrotImagePath: ''
+                };
+            },
+            methods: {
+                goToPage(pageUrl) {
+                    window.location.href = pageUrl;
+                },
+                submitData() {
+                    const jsonData = {
+                        max_real: this.c_maxre,
+                        min_real: this.c_minre,
+                        max_imaginary: this.c_maxim,
+                        min_imaginary: this.c_minim,
+                        max_iterations: this.max_iter,
+                        height: this.hi,
+                        width: this.wi
+                    };
+
+                    fetch('/mandelbrot.html', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(jsonData)
+                    })
+                    .then(response => response.json())
+                    
+                    .catch(error => console.error('Error:', error));
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

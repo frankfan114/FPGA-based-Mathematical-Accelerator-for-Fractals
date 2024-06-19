@@ -36,13 +36,20 @@
 - Load `ISAAC.bit` and `ISAAC.hwh` to the Jupyter server
 - Run `ISAAC.ipynb`
 - Run `backupServer.py`
-- For the software parts, please firstly run the `setup.py` by run `python setup.py build_ext --inplace` in the terminal to compile the Cython file, then run the `app.py` for display.
+- For the software implementation, please first run the `setup.py` by running `python setup.py build_ext --inplace` in the terminal to compile the Cython file, then run the `app.py` for display.
 
 ## Demo 
 
 ### Demo of Hardware Implementation
 
 https://github.com/franfafdaf/ISAAC/assets/115477676/fd61731c-c877-496b-b345-f48573054359
+
+### Hardware using HDMI output
+#### The Mandelbrot set
+![hw-gui1](https://github.com/franfafdaf/ISAAC/assets/115477676/aeef2e58-2b38-45d0-950a-a0c8ea523461)
+#### A Julia set
+![hw-gui2](https://github.com/franfafdaf/ISAAC/assets/115477676/07afdfd2-cb14-4616-a926-af5e2785d3ef)
+
 
 ### Demo of Software Implementation
 

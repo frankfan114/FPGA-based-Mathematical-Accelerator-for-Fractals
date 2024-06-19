@@ -36,7 +36,7 @@
 - Load `ISAAC.bit` and `ISAAC.hwh` to the Jupyter server
 - Run `ISAAC.ipynb`
 - Run `backupServer.py`
-- For the software parts, please firstly run the setup.py by run "python setup.py build_ext --inplace" in the terminal to compile the Cython file, then run the app.py for display.
+- For the software parts, please firstly run the `setup.py` by run `python setup.py build_ext --inplace` in the terminal to compile the Cython file, then run the `app.py` for display.
 
 ## Demo 
 

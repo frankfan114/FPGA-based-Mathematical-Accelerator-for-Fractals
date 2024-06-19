@@ -31,6 +31,7 @@
 `src` Files needed for demo
 
 ## Instructions
+- Download all files in `src` folder
 - Connect to PYNQ server 
 - Load `ISAAC.bit` and `ISAAC.hwh` to the Jupyter server
 - Run `ISAAC.ipynb`

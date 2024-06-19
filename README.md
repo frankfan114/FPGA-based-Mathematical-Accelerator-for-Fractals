@@ -6,9 +6,9 @@
 
 ├── `0.Testfile` Engineering file for simulation
 
-├── `1.Initial` Initial design for visualising the Mandelbrot and Julia set
+├── `1.Initial` Initial design for visualising the Mandelbrot and Julia set, only available in simulation
 
-├── `2.Staged` Unused design using the idea of pipelining
+├── `2.Staged` Feasible design by applying state machine
 
 ├── `3.MMIO` MMIO file allowing for adjustment of parameters
 
@@ -33,6 +33,7 @@
 - Connect to PYNQ server 
 - Load `ISAAC.bit` and `ISAAC.hwh` to the Jupyter server
 - Run `ISAAC.ipynb`
+- Run `backupServer.py`
 
 ## Demo 
 

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .controls-top {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        .controls-top .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .controls-top input {
+            width: 100px;
+        }
+        .preview-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+        .preview-area {
+            background-color: #fff;
+            border: 1px solid #000;
+            flex: 1;
+            max-width: 640px;
+            height: 480px;
+            position: relative;
+        }
+        .preview-area h3 {
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border-bottom: 1px solid #000;
+        }
+        .preview-area canvas {
+            width: 100%;
+            height: calc(100% - 40px);
+        }
+        .status-area {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            box-sizing: border-box;
+        }
+        .status-area h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+        .scrollable {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+    <!-- Load Vue from CDN -->
+    <script type="module">
+        import { createApp, reactive } from 'https://unpkg.com/vue@3.2.29/dist/vue.esm-browser.js';
+
+        createApp({
+            data() {
+                return {
+                    c_maxre: 1,
+                    c_minre: -2,
+                    c_maxim: 1.5,
+                    c_minim: -1.5,
+                    max_iter: 100,
+                    hi: 480,
+                    wi: 640,
+                    zoom_factor: 1,
+                    coordinate: 0,
+                    colorOption: 'color',
+                    mandelbrotResults: {
+                        total_time: 0,
+                        overall_throughput: 0,
+                        latency: 0
+                    },
+                    juliaResults: {
+                        total_time: 0,
+                        overall_throughput: 0,
+                        latency: 0,
+                        cr: 0,
+                        ci: 0,
+                        hasInit: false
+                    }
+                };
+            },
+            setup() {
+                let juliaResults = reactive({
+                    total_time: 0,
+                    overall_throughput: 0,
+                    latency: 0,
+                    cr: 0,
+                    ci: 0,
+                    hasInit: false
+                });
+                let mandelbrotResults = reactive({
+                    total_time: 0,
+                    overall_throughput: 0,
+                    latency: 0
+                });
+
+                function saveAsJson() {
+                    const statusContent = document.getElementById('status-content');
+                    const textContent = statusContent.innerText;
+                    const blob = new Blob([textContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'mandelbrot_results.json';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                }
+
+                function fetchMandelbrotResults() {
+                    fetch(`http://${window.location.hostname}:5000/mandelbrot`, {
+                        method: 'GET'
+                    })
+                        .then(response => response.json())
+                        .then(response => {
+                            let base64Image = response.image;
+                            const img = new Image();
+                            img.onload = () => {
+                                const juliaCanvas = document.getElementById('mandelbrotCanvas');
+                                const juliaCtx = juliaCanvas.getContext('2d');
+                                juliaCtx.drawImage(img, 0, 0, juliaCanvas.width, juliaCanvas.height);
+                            };
+                            img.src = base64Image;
+                            mandelbrotResults.total_time = response.total_time;
+                            mandelbrotResults.overall_throughput = response.overall_throughput;
+                            mandelbrotResults.latency = response.latency;
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                        });
+                }
+
+                function fetchJuliaResults(event) {
+                    const canvas = document.getElementById('mandelbrotCanvas');
+                    const rect = canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    const cr = -2.0 + (3.0 * x / canvas.width);
+                    const ci = -1.5 + (3.0 * y / canvas.height);
+
+                    juliaResults.cr = cr;
+                    juliaResults.ci = ci;
+
+                    fetch(`http://${window.location.hostname}:5000/julia`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ cr: cr, ci: ci }),
+                    })
+                        .then(response => response.json())
+                        .then(response => {
+                            let base64Image = response.image;
+                            const img = new Image();
+                            img.onload = () => {
+                                const juliaCanvas = document.getElementById('juliaCanvas');
+                                const juliaCtx = juliaCanvas.getContext('2d');
+                                juliaCtx.drawImage(img, 0, 0, juliaCanvas.width, juliaCanvas.height);
+                            };
+                            img.src = base64Image;
+                            juliaResults.total_time = response.total_time;
+                            juliaResults.overall_throughput = response.overall_throughput;
+                            juliaResults.latency = response.latency;
+                            juliaResults.hasInit = true;
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                        });
+                }
+
+                function goToPage(pageUrl) {
+                    window.location.href = pageUrl;
+                }
+
+                // init fetch fetchMandelbrotResults
+                fetchMandelbrotResults();
+
+                return {
+                    juliaResults,
+                    mandelbrotResults,
+                    fetchMandelbrotResults,
+                    fetchJuliaResults,
+                    goToPage,
+                    saveAsJson
+                };
+            },
+            methods: {
+                submitData() {
+                    const jsonData = {
+                        max_real: this.c_maxre,
+                        min_real: this.c_minre,
+                        max_imaginary: this.c_maxim,
+                        min_imaginary: this.c_minim,
+                        max_iterations: this.max_iter,
+                        height: this.hi,
+                        width: this.wi
+                        
+                    };
+                    fetch(`http://${window.location.hostname}:5000/mandelbrot`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(jsonData)
+                    })
+                    .then(response => response.json())
+                    .catch(error => console.error('Error:', error));
+                }
+            }
+        }).mount('#app');
+    </script>
+</head>
+<body>
+    <div id="app" class="container">
+        <div class="controls-top">
+            <form id="mandelbrotForm" @submit.prevent="submitData">
+                <div class="control-group">
+                    <label for="maxreal">Max Real Part:</label>
+                    <input type="number" id="maxreal" step="any" v-model.number="c_maxre">
+                </div>
+                <div class="control-group">
+                    <label for="minreal">Min Real Part:</label>
+                    <input type="number" id="minreal" step="any" v-model.number="c_minre">
+                </div>
+                <div class="control-group">
+                    <label for="maximaginary">Max Imaginary Part:</label>
+                    <input type="number" id="maximaginary" step="any" v-model.number="c_maxim">
+                </div>
+                <div class="control-group">
+                    <label for="minimaginary">Min Imaginary Part:</label>
+                    <input type="number" id="minimaginary" step="any" v-model.number="c_minim">
+                </div>
+                <div class="control-group">
+                    <label for="max-iterations">Max Iterations:</label>
+                    <input type="number" id="iterations" v-model.number="max_iter">
+                </div>
+                <div class="control-group">
+                    <label for="width">Width:</label>
+                    <input type="number" id="Width" v-model.number="wi">
+                </div>
+                <div class="control-group">
+                    <label for="height">Height:</label>
+                    <input type="number" id="Height" v-model.number="hi">
+                </div>
+                <button type="submit">Submit</button>
+                
+                <button @click="goToPage('http://146.169.136.30:5001/guibackup')">hardware</button>
+            </form>
+        </div>
+
+        <div class="preview-container">
+            <div class="preview-area">
+                <h3>Mandelbrot Set</h3>
+                <canvas id="mandelbrotCanvas" width="640" height="480" @click="fetchJuliaResults"></canvas>
+            </div>
+
+            <div class="preview-area">
+                <h3>Julia Set</h3>
+                <canvas id="juliaCanvas" width="640" height="480"></canvas>
+            </div>
+
+            <div class="status-area">
+                <h2>Status Area</h2>
+                <div id="status-content">
+                    <button @click="fetchMandelbrotResults">Compute Mandelbrot</button>
+                    <div id="status-info-man" class="scrollable">
+                        <p style="font-weight: bold">Mandelbrot Set</p>
+                        <p>Total Time: {{ mandelbrotResults.total_time }}</p>
+                        <p>Overall Throughput: {{ mandelbrotResults.overall_throughput }}</p>
+                        <p>Latency: {{ mandelbrotResults.latency }}</p>
+                    </div>
+                    <div id="status-info-julia" class="scrollable" v-if="juliaResults.hasInit">
+                        <p style="font-weight: bold">Julia Set</p>
+                        <p>Total Time: {{ juliaResults.total_time }}</p>
+                        <p>Overall Throughput: {{ juliaResults.overall_throughput }}</p>
+                        <p>Latency: {{ juliaResults.latency }}</p>
+                        <p>CR: {{ juliaResults.cr }}</p>
+                        <p>CI: {{ juliaResults.ci }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

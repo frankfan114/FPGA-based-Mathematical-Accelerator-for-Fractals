@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+
+        .preview-area-container {
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            transform: translateX(-100px);
+        }
+
+        .result-box {
+            border: 2px solid #007BFF;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .controls-top {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .controls-top .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preview-area {
+            background-color: #fff;
+            border: 1px solid #000;
+            width: 960px;
+            height: 540px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .left-sidebar {
+            width: auto;
+            height: 800px;
+            background-color: #f0f0f0;
+            
+            text-align: center;
+            position: absolute;
+            top:50%;
+            transform: translateY(-50%);
+            left: 80px;
+        }
+
+        .left-sidebar img {
+            max-width: 100%;
+            height: 100%;
+        }
+
+        #preview-img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .status-area {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            width: 400px;
+            height: 560px;
+            box-sizing: border-box;
+            position: absolute;
+            top: 44%;
+            transform: translateY(-50%);
+            right: -170px;
+            justify-content: center;
+            align-items: center;
+            /* Adjust as needed */
+        }
+
+        .sub {
+            margin-top: 20px; 
+            text-align: center; 
+        }
+        
+        .controls input[type="range"] {
+            width: 100%;
+        }
+
+        .color_opt,
+        .moveimag,
+        .max_iter {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .color_opt label,
+        .moveimag label,
+        .max_iter label {
+            margin-right: 10px;
+        }
+
+        .color_opt input,
+        .moveimag input,
+        .max_iter input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80px;
+            margin-right: 10px;
+            box-sizing: border-box;
+        }
+
+        .color_preview {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000;
+            margin-left: 20px;
+        }
+
+        .buttons,
+        .extra-controls {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .coordinate-display{
+            width: 100%;
+            Height: 100px
+
+        }
+        button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .scrollable {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .extra-controls form {
+            display: flex;
+            align-items: center;
+        }
+
+        .extra-controls label {
+            margin-right: 10px;
+        }
+
+        .extra-controls input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100px;
+        }
+
+        .extra-controls button[type="submit"] {
+            padding: 8px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .extra-controls button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script src="/static/vue.esm-browser.js"></script>
+</head>
+
+<body>
+    <div class="control-top">
+        <h2>ISAAC Accelerator</h2>
+    </div>
+    
+    <div class="left-sidebar">
+        <img src="/static/imperial.png" alt="Imperial Logo">
+    </div>
+    <div class="preview-area-container">
+
+        
+        <div id="app">
+            <div class="container">
+                <div class="color-options">
+                    <form id="mandelbrotForm" @submit.prevent="submitData">
+
+                        <div class="max_iter">
+                            <label for="max-iterations">Max Iterations:</label>
+                            <input type="number" id="iterations" v-model.number="max_iter">
+                            <input type="range" id="iterationRange" min="0" max="255" v-model.number="max_iter">
+                            <span>{{ max_iter }}</span>
+                        </div>
+                        <div class="final-rgb-preview" :style="{ backgroundColor: finalRGB }">
+                            <h3> ________________________________________________________________________________________________ </h3>
+                        </div>
+                        <div class="color_opt">
+                            <label for="color1">Red:</label>
+                            <input type="number" id="color1" step="any" v-model.number="color1">
+                            <input type="range" id="redRange" min="0" max="255" v-model.number="color1">
+                            <span>{{ color1 }}</span>
+                            <div class="color-preview" :style="{ backgroundColor: rgbColor1 }"></div>
+
+                            <label for="color2">Green:</label>
+                            <input type="number" id="color2" step="any" v-model.number="color2">
+                            <input type="range" id="greenRange" min="0" max="255" v-model.number="color2">
+                            <span>{{ color2 }}</span>
+                            <div class="color-preview" :style="{ backgroundColor: rgbColor2 }"></div>
+
+                            <label for="color3">Blue:</label>
+                            <input type="number" id="color3" step="any" v-model.number="color3">
+                            <input type="range" id="blueRange" min="0" max="255" v-model.number="color3">
+                            <span>{{ color3 }}</span>
+                            <div class="color-preview" :style="{ backgroundColor: rgbColor3 }"></div>
+
+                            <label for="color4">Success:</label>
+                            <input type="number" id="color4" step="any" v-model.number="color4">
+                        </div>
+                        <div class="moveimag">
+                            <label for="up">Up:</label>
+                            <input type="number" id="up" step="any" v-model.number="up">
+
+                            <label for="down">Down:</label>
+                            <input type="number" id="down" step="any" v-model.number="down">
+
+                            <label for="left">Left:</label>
+                            <input type="number" id="left" step="any" v-model.number="left">
+
+                            <label for="right">Right:</label>
+                            <input type="number" id="right" step="any" v-model.number="right">
+
+                            <label for="enableReset">Enable Reset:</label>
+                            <input type="checkbox" id="enableReset" v-model="enablereset">
+                        </div>
+                        <div class="sub">
+                        <button type="submit">Submit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="preview-area">
+                <canvas id="control-canvas" width="960" height="540"></canvas>
+            </div>
+            <div class="status-area">
+                <h2>Status Area</h2>
+                <div id="status-content" class="scrollable"></div>
+                <div class="coordinate-display" id="coordinate-display">
+                    <p>Click coordinates will be displayed here</p>
+                </div>
+                <div class="buttons">
+                    <button @click="goToPage('http://146.169.136.30:5000/')">Software</button>
+                    <label for="enableJ">Enable Julia:</label>
+                    <input type="checkbox" id="enableJ" v-model="enableJ">
+
+                    <button @click="saveAsPng">Save as PNG</button>
+                </div>
+                <div class="extra-controls">
+                    <form>
+                        <label for="zoom_factor">Zoom Factor:</label>
+                        <input type="number" id="zoom_factor" v-model.number="zoom_factor">
+
+                        <label for="enablezoomin">Enable Zoomin:</label>
+                        <input type="checkbox" id="enablezoomin" v-model="enablezoomin">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type='module'>
+        import { createApp, reactive } from '/static/vue.esm-browser.js';
+
+        createApp({
+            data() {
+                return {
+                    enableJ: false,
+                    julia: 0,
+                    enablereset: false,
+                    zoomin_factor: 0,
+                    zoomout_factor: 0,
+                    enablezoomin: false,
+                    clickX: null,
+                    clickY: null,
+                    reset: 0,
+                    color1: 3,
+                    color2: 5,
+                    color3: 0,
+                    color4: 0,
+                    up: 0,
+                    down: 0,
+                    left: 0,
+                    right: 0,
+                    c_maxre: 1,
+                    c_minre: -1,
+                    c_maxim: 1,
+                    c_minim: -1,
+                    max_iter: 100,
+                    hi: 480,
+                    wi: 640,
+                    zoom_factor: 0,
+                    coordinate: 0,
+                    colorOption: 'color',
+                    total_time: 0,
+                    frameRate: 0,
+                    pixelRate: 0,
+                    latency: 0,
+                    results: {
+                        total_time: 0,
+                        frameRate: 0,
+                        latency: 0,
+                        pixelRate: 0
+                    }
+                };
+            },
+            setup() {
+                const results = reactive({
+                    total_time: 0,
+                    frameRate: 0,
+                    latency: 0,
+                    pixelRate: 0
+                });
+
+                function saveAsPng() {
+                    const canvas = document.getElementById('control-canvas');
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL('image/png');
+                    link.download = 'mandelbrot_image.png';
+                    link.click();
+                }
+
+                function saveAsJson() {
+                    const statusContent = document.getElementById('status-content');
+                    const textContent = statusContent.innerText;
+                    const blob = new Blob([textContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'mandelbrot_results.json';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                }
+
+                function goToPage(pageUrl) {
+                    window.location.href = pageUrl;
+                }
+
+                return {
+                    results,
+                    goToPage,
+                    saveAsPng,
+                    saveAsJson
+                };
+            },
+            computed: {
+                rgbColor1() {
+                    return `rgb(${this.color1}, 0, 0)`;
+                },
+                rgbColor2() {
+                    return `rgb(0, ${this.color2}, 0)`;
+                },
+                rgbColor3() {
+                    return `rgb(0, 0, ${this.color3})`;
+                },
+                finalRGB() {
+                    return `rgb(${this.color1}, ${this.color2}, ${this.color3})`;
+                }
+            },
+            methods: {
+                submitData() {
+                    const jsonData = {
+                        color1: this.color1,
+                        color2: this.color2,
+                        color3: this.color3,
+                        color4: this.color4,
+                        max_real: this.c_maxre,
+                        min_real: this.c_minre,
+                        max_imaginary: this.c_maxim,
+                        min_imaginary: this.c_minim,
+                        max_iterations: this.max_iter,
+                        height: this.hi,
+                        width: this.wi,
+                        coordinate: this.coordinate,
+                        zoomin_factor: this.enablezoomin ? this.zoom_factor : 0,
+                        zoomout_factor: this.enablezoomin ? 0 : this.zoom_factor,
+                        up: this.up,
+                        down: this.down,
+                        left: this.left,
+                        right: this.right,
+                        reset: this.enablereset ? 1 : 0,
+                        zoom_factor: this.zoom_factor,
+                        julia: this.enableJ ? 1 : 0,
+                        clickX: this.clickX,
+                        clickY: this.clickY
+                    };
+                    this.jsonDataString = JSON.stringify(jsonData, null, 2);
+                    fetch(`http://${window.location.hostname}:5001/get_image`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(jsonData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.image) {
+                                const canvas = document.getElementById('control-canvas');
+                                const ctx = canvas.getContext('2d');
+                                const img = new Image();
+                                img.onload = function () {
+                                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                };
+                                img.src = `data:image/png;base64,${data.image}`;
+                            } else {
+                                console.error('Error:', data.error || 'Unknown error');
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                },
+                displayCoordinates(x, y) {
+                    const coordinateDisplay = document.getElementById('coordinate-display');
+                    coordinateDisplay.innerHTML = `<p>Last Clicked Coordinates: (${x}, ${y})</p>`;
+                    coordinateDisplay.scrollTop = coordinateDisplay.scrollHeight;
+                }
+            },
+            mounted() {
+                const canvas = document.getElementById('control-canvas');
+                canvas.addEventListener('click', (event) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    console.log(`Clicked coordinates: (${x}, ${y})`);
+                    this.clickX = x;
+                    this.clickY = y;
+                    this.displayCoordinates(x, y);
+                    // Here you can do anything with the coordinates, e.g., send them to your backend
+                });
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

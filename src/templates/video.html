@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+</head>
+<body>
+    <h1>Video Player</h1>
+    <div id="video-container">
+        <canvas id="video-canvas"></canvas>
+    </div>
+    <progress id="progress-bar" value="0" max="100"></progress>
+    <span id="progress-text">0%</span>
+    <button id="play-button">start</button>
+    <button id="pause-button">pause</button>
+    
+
+    <script>
+        var canvas = document.getElementById('video-canvas');
+        var context = canvas.getContext('2d');
+        var fetchFrameInterval;
+
+        function showFrame(frameData) {
+            if (frameData) {
+                var img = new Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0);
+                };
+                img.src = frameData;
+            }
+        }
+
+        function fetchNextFrame() {
+            fetch('/next_frame')
+                .then(response => response.blob())
+                .then(blob => {
+                    var reader = new FileReader();
+                    reader.onload = function() {
+                        showFrame(reader.result);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+        }
+
+        function playVideo() {
+            fetchFrameInterval = setInterval(() => {
+                fetchNextFrame();
+                updateProgress();
+            }, 1000); 
+        }
+        
+        function pauseVideo() {
+            clearInterval(fetchFrameInterval);
+        }
+
+        function updateProgress() {
+            fetch('/progress')
+                .then(response => response.json())
+                .then(data => {
+                    const progress = data.progress;
+                    const progressBar = document.getElementById('progress-bar');
+                    const progressText = document.getElementById('progress-text');
+
+                    progressBar.value = progress;
+                    progressText.textContent = progress + '%';
+                });
+        }
+
+        document.getElementById('play-button').addEventListener('click', function() {
+            fetch('/play_video')
+                .then(response => {
+                    if (response.ok) {
+                        playVideo();
+                    }
+                });
+        });
+
+        document.getElementById('pause-button').addEventListener('click', function() {
+            fetch('/pause_video')
+                .then(response => {
+                    if (response.ok) {
+                        pauseVideo();
+                    }
+                });
+        });
+
+        document.getElementById('zoom-in-button').addEventListener('click', function() {
+            fetch('/zoom_in')
+                .then(response => {
+                    if (response.ok) {
+                        // Zoom in logic
+                    }
+                });
+        });
+
+        document.getElementById('zoom-out-button').addEventListener('click', function() {
+            fetch('/zoom_out')
+                .then(response => {
+                    if (response.ok) {
+                        // Zoom out logic
+                    }
+                });
+        });
+
+        // Start fetching frames and progress updates when the page loads
+        playVideo();
+    </script>
+</body>
+</html>

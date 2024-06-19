@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Parameters and Formula Example</title>
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        #app {
+            text-align: center;
+            padding: 20px;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .imageContainer {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #000;
+            margin-top: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        img {
+            
+            cursor: grab;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: relative;
+            transform: translate(0, 0);
+        }
+    </style>
+    <script type="module" src="/static/vue.esm-browser.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <h1>Mandelbrot Set</h1>
+        <button @click="fetchMandelbrotResults">Compute Mandelbrot</button>
+        <button @click="goToPage('mandelbrot.html')">new input</button>
+        <button @click="goToPage('video')">Video</button>
+
+        <p>Total Time: {{ results.total_time }} seconds</p>
+        <p>Overall Throughput: {{ results.overall_throughput }} pixels per second</p>
+        <p>Latency: {{ results.latency }} seconds per pixel</p>
+
+        <!-- Buttons for moving the image -->
+        <div>
+            <button @click="moveImage('up')">Move Up</button>
+            <button @click="moveImage('down')">Move Down</button>
+            <button @click="moveImage('left')">Move Left</button>
+            <button @click="moveImage('right')">Move Right</button>
+        </div>
+    </div>
+    <div class="imageContainer" id="imageContainer">
+        <img id="mandelbrotImage" src="" alt="Mandelbrot Set Image" style="display: none;">
+    </div>
+
+    <script type="module">
+        import { createApp, reactive } from "/static/vue.esm-browser.js";
+
+        createApp({
+            setup() {
+                const results = reactive({
+                    total_time: 0,
+                    overall_throughput: 0,
+                    latency: 0
+                });
+
+                function fetchMandelbrotResults() {
+                    fetch('http://146.169.137.151:5001')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            results.total_time = data.total_time;
+                            results.overall_throughput = data.overall_throughput;
+                            results.latency = data.latency;
+
+                            // Assuming the server endpoint to fetch the image is correctly set
+                            checkAndDisplayImage('http://146.169.137.151:5001/image');
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                        });
+                }
+
+                function checkAndDisplayImage(imageUrl) {
+                    fetch(imageUrl, { method: 'HEAD' })
+                        .then(res => {
+                            if (res.ok) {
+                                const imgElement = document.getElementById('mandelbrotImage');
+                                imgElement.src = imageUrl;
+                                imgElement.style.display = 'block';
+
+                                makeDraggable('mandelbrotImage', 'imageContainer');
+                            } else {
+                                console.error('Image not found on server.');
+                            }
+                        }).catch(err => console.error('Error fetching image:', err));
+                }
+
+                function goToPage(pageUrl) {
+                    window.location.href = pageUrl;
+                }
+
+                // Function to make an element draggable inside its container
+                function makeDraggable(elementId, containerId) {
+                    const element = document.getElementById(elementId);
+                    const container = document.getElementById(containerId);
+
+                    let offsetX, offsetY;
+
+                    element.addEventListener('mousedown', (e) => {
+                        offsetX = e.clientX - element.getBoundingClientRect().left;
+                        offsetY = e.clientY - element.getBoundingClientRect().top;
+
+                        document.addEventListener('mousemove', dragElement);
+                        document.addEventListener('mouseup', () => {
+                            document.removeEventListener('mousemove', dragElement);
+                        });
+                    });
+
+                    function dragElement(e) {
+                        const newX = e.clientX - offsetX - container.getBoundingClientRect().left;
+                        const newY = e.clientY - offsetY - container.getBoundingClientRect().top;
+
+                        const maxX = container.clientWidth - element.clientWidth;
+                        const maxY = container.clientHeight - element.clientHeight;
+
+                        element.style.left = Math.min(Math.max(0, newX), maxX) + 'px';
+                        element.style.top = Math.min(Math.max(0, newY), maxY) + 'px';
+                    }
+                }
+
+                // Function to move the image within the frame
+                function moveImage(direction) {
+                    const imgElement = document.getElementById('mandelbrotImage');
+                    const container = document.getElementById('imageContainer');
+
+                    let newX = imgElement.offsetLeft;
+                    let newY = imgElement.offsetTop;
+
+                    const step = 20; // Adjust this value based on the desired movement speed
+
+                    switch (direction) {
+                        case 'up':
+                            newY -= step;
+                            break;
+                        case 'down':
+                            newY += step;
+                            break;
+                        case 'left':
+                            newX -= step;
+                            break;
+                        case 'right':
+                            newX += step;
+                            break;
+                    }
+
+                    // Limit the image within the container
+                    const maxX = container.clientWidth - imgElement.clientWidth;
+                    const maxY = container.clientHeight - imgElement.clientHeight;
+
+                    newX = Math.min(Math.max(0, newX), maxX);
+                    newY = Math.min(Math.max(0, newY), maxY);
+
+    // 设置图像的新位置
+                    imgElement.style.left = newX + 'px';
+                    imgElement.style.top = newY + 'px';
+                }
+
+                return {
+                    results,
+                    fetchMandelbrotResults,
+                    goToPage,
+                    moveImage
+                };
+            }
+        }).mount("#app");
+    </script>
+</body>
+
+</html>

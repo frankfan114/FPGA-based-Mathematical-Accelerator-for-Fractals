@@ -27,8 +27,12 @@
 └── `9.Simulation` Tools used for simulation
 
 `Others` Other Materials
+`src` Files needed for demo
 
 ## Instructions
+- Connect to PYNQ server 
+- Load `ISAAC.bit` and `ISAAC.hwh` to the Jupyter server
+- Run `ISAAC.ipynb`
 
 ## Demo 
 

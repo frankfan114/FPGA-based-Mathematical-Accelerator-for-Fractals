@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame Player</title>
+    <style>
+        #frame {
+            width: 640px;
+            height: 480px;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mandelbrot Frame Player</h1>
+    <img id="frame" src="" alt="Mandelbrot Frame">
+    <div>
+        <button onclick="startPlayback()">Start</button>
+        <button onclick="pausePlayback()">Pause</button>
+    </div>
+    <script>
+        let frames = [];
+        let currentFrame = 0;
+        let playbackInterval;
+
+        function fetchFrames() {
+            fetch('/frames')
+                .then(response => response.json())
+                .then(data => {
+                    frames = data.frames;
+                })
+                .catch(error => console.error('Error fetching frames:', error));
+        }
+
+        function displayFrame() {
+            if (currentFrame < frames.length) {
+                document.getElementById('frame').src = frames[currentFrame];
+                currentFrame++;
+            } else {
+                currentFrame = 0;
+            }
+        }
+
+        function startPlayback() {
+            playbackInterval = setInterval(displayFrame, 100);
+        }
+
+        function pausePlayback() {
+            clearInterval(playbackInterval);
+        }
+
+        window.onload = fetchFrames;
+    </script>
+</body>
+</html>

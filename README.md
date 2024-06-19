@@ -1,4 +1,4 @@
-# **Imperial EEE&EIE(24) 2nd-year Mathematics Accelerator Project**
+# **ISAAC: An FPGA-based Mathematical Accelerator for Fractals**
 
 Folders 1-5 contain historical pixel generator code with each significant modification. 
 

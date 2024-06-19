@@ -1,4 +1,4 @@
-# **Imperial EEE&EIE(24) 2nd-year Mathematics Accelerator Project**
+# **ISAAC: An FPGA-based Mathematical Accelerator for Fractals**
 
 ## Repo Structure
 `0-5`: Engineering file used for development
